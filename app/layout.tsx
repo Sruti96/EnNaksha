@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Playfair_Display, Inter, Caveat } from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -11,6 +11,12 @@ const playfair = Playfair_Display({
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+const dancing = Caveat({
+  subsets: ["latin"],
+  variable: "--font-dancing",
   display: "swap",
 });
 
@@ -38,7 +44,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
       </head>
-      <body className={`${playfair.variable} ${inter.variable} font-inter antialiased`}>
+      <body className={`${playfair.variable} ${inter.variable} ${dancing.variable} font-inter antialiased`}>
         {children}
       </body>
     </html>

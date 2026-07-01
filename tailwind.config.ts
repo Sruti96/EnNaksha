@@ -21,6 +21,7 @@ const config: Config = {
       fontFamily: {
         playfair: ["var(--font-playfair)", "serif"],
         inter: ["var(--font-inter)", "sans-serif"],
+        dancing: ["var(--font-dancing)", "cursive"],
       },
     },
   },
