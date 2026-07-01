@@ -15,13 +15,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "EnNaksha — Premium Home Interiors, Bangalore",
+  title: "EnNaksha — Home Interior Design & Project Management, Bangalore",
   description:
-    "A software-disciplined approach to premium home interiors for urban Indian homeowners. Fixed pricing, on-time delivery, daily photo updates.",
+    "EnNaksha — premium home interior design and project management for Bangalore homeowners. Transparent, scope-locked pricing. Weekly updates. Zero site visits needed.",
   openGraph: {
-    title: "EnNaksha — Premium Home Interiors, Bangalore",
+    title: "EnNaksha — Home Interior Design & Project Management, Bangalore",
     description:
-      "Fixed pricing, on-time delivery, zero surprises. Get a free 2D layout within 48 hours.",
+      "Transparent, scope-locked pricing. Weekly photo updates. Zero site visits. We design and manage your home project end-to-end. Free 2D layout in 48 hours.",
     type: "website",
     locale: "en_IN",
     siteName: "EnNaksha",
@@ -35,6 +35,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
+      </head>
       <body className={`${playfair.variable} ${inter.variable} font-inter antialiased`}>
         {children}
       </body>

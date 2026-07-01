@@ -15,6 +15,19 @@ type FormData = {
   whatsapp: string;
 };
 
+const PLANS = [
+  { label: "Naksha Design Plan", sub: "₹175–200/sqft" },
+  { label: "PMC Plan", sub: "₹350–450/sqft" },
+  { label: "Not sure yet", sub: "" },
+];
+
+const ADD_ONS = [
+  "Painting work (interior / exterior)",
+  "Electrical fixtures and wiring",
+  "Balcony or outdoor setup",
+  "POP / false ceiling only",
+];
+
 const initialData: FormData = {
   location: "",
   email: "",
@@ -52,8 +65,14 @@ export default function LeadForm() {
   const [data, setData] = useState<FormData>(initialData);
   const [submitted, setSubmitted] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("PMC Plan");
+  const [addOns, setAddOns] = useState<string[]>([]);
 
   const progress = ((step + 1) / STEPS.length) * 100;
+
+  const nextDate = new Date();
+  nextDate.setMonth(nextDate.getMonth() + 1);
+  const nextMonth = nextDate.toLocaleString("en-IN", { month: "long" });
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
@@ -65,24 +84,28 @@ export default function LeadForm() {
 
   if (submitted) {
     return (
-      <section id="contact" className="bg-cream py-20">
+      <section id="contact" className="bg-sand py-20">
         <div className="max-w-2xl mx-auto px-4 text-center">
-          <div className="bg-ivory rounded-2xl p-10 shadow-lg border border-sand">
-            <div className="text-6xl mb-6">✅</div>
-            <h2 className="font-playfair text-3xl font-bold text-charcoal mb-4">
-              We've received your details!
+          <div className="bg-ivory rounded-3xl p-12 shadow-lg border border-sand">
+            <div className="text-6xl mb-5">🏡</div>
+            <h2 className="font-playfair text-3xl font-bold text-charcoal mb-3">
+              Your dream home journey has begun!
             </h2>
-            <p className="font-inter text-muted leading-relaxed">
-              Our design team will WhatsApp you within 24 hours. Sit back —
-              your dream home is in good hands.
+            <p className="font-inter text-muted leading-relaxed mb-6">
+              We&apos;ve received your enquiry! Our team will WhatsApp you <strong className="text-charcoal">within 24 hours</strong> with a free initial assessment. No sales pressure — just a conversation about your home.
             </p>
-            <div
-              className="mt-8 h-32 rounded-xl"
-              style={{
-                background:
-                  "linear-gradient(135deg, #C4622D22, #8B691422, #E8E0D0)",
-              }}
-            />
+            <div className="flex justify-center gap-8 py-5 border-t border-b border-sand mb-6">
+              {[["📐", "Free 2D layout"], ["📸", "Daily photo updates"], ["💰", "₹0 hidden charges"]].map(([icon, label]) => (
+                <div key={label} className="text-center">
+                  <div className="text-2xl mb-1">{icon}</div>
+                  <div className="font-inter text-[11px] text-muted">{label}</div>
+                </div>
+              ))}
+            </div>
+            <p className="font-inter text-xs text-muted/60">
+              While you wait, explore our{" "}
+              <a href="#gallery" className="text-warm-brown underline">recent projects →</a>
+            </p>
           </div>
         </div>
       </section>
@@ -90,25 +113,75 @@ export default function LeadForm() {
   }
 
   return (
-    <section id="contact" className="bg-cream py-20">
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="text-center mb-10">
-          <h2 className="font-playfair text-3xl sm:text-4xl font-bold text-charcoal mb-3">
-            Engineer My Naksha
-          </h2>
-          <p className="font-inter text-muted">
-            Tell us about your dream home. Our design team will reach out within 24 hours.
-          </p>
-        </div>
+    <section id="contact" className="bg-sand py-20">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-12 items-start">
+
+          {/* Left — persuasion column */}
+          <div className="lg:pt-2">
+            <div className="inline-flex items-center gap-2 bg-warm-brown/10 border border-warm-brown/20 rounded-full px-4 py-1.5 mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse" />
+              <span className="font-inter text-[11px] font-semibold text-warm-brown uppercase tracking-[0.15em]">
+                Free — Decide After You See Our Work
+              </span>
+            </div>
+            <h2 className="font-playfair text-[34px] sm:text-[42px] font-bold text-charcoal leading-tight mb-4">
+              Get Your Free<br />
+              <span className="text-warm-brown italic">2D Home Design</span><br />
+              in 48 Hours.
+            </h2>
+            <p className="font-inter text-[15px] text-muted leading-relaxed mb-7">
+              Tell us about your space. We study your floor plan and connect you with the right professionals — with a personalised layout ready before you spend a single rupee.
+            </p>
+
+            <div className="flex flex-col gap-4 mb-7">
+              {[
+                { icon: "🔒", title: "Scope-locked pricing — documented in writing before work begins", sub: "No surprise costs on your agreed scope." },
+                { icon: "📸", title: "Daily WhatsApp photo updates", sub: "Track your project from anywhere." },
+                { icon: "⏱️", title: "On-time delivery, guaranteed", sub: "We hold vendors accountable so you don't have to." },
+              ].map((item) => (
+                <div key={item.title} className="flex items-start gap-4">
+                  <div className="text-xl mt-0.5 flex-shrink-0">{item.icon}</div>
+                  <div>
+                    <div className="font-inter text-[14px] font-semibold text-charcoal">{item.title}</div>
+                    <div className="font-inter text-[12px] text-muted">{item.sub}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-sand pt-5">
+              <div className="flex gap-0.5 mb-1.5">
+                {[...Array(5)].map((_, i) => <span key={i} className="text-yellow-500 text-base">★</span>)}
+                <span className="font-inter text-[12px] text-muted ml-2">4.9 / 5 · 180+ happy homeowners</span>
+              </div>
+              <p className="font-inter text-[13px] text-muted italic leading-snug">
+                &ldquo;EnNaksha handled everything — I didn&apos;t visit the site even once. Worth every rupee.&rdquo;
+              </p>
+              <p className="font-inter text-[11px] text-muted/60 mt-1">— Arun M., NRI — Whitefield</p>
+            </div>
+          </div>
+
+          {/* Right — form card */}
+          <div>
+            {/* Urgency + step indicator */}
+            <div className="flex justify-between items-center mb-4">
+              <span className="font-inter text-[11px] text-muted uppercase tracking-wider">
+                Step {step + 1} of {STEPS.length}
+              </span>
+              <span className="font-inter text-[11px] text-terracotta font-semibold bg-terracotta/10 border border-terracotta/20 px-3 py-1 rounded-full">
+                🔥 4 slots left for {nextMonth}
+              </span>
+            </div>
 
         {/* Progress bar */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex justify-between mb-2">
             {STEPS.map((s, i) => (
               <span
                 key={i}
-                className={`text-xs font-inter font-semibold ${
-                  i <= step ? "text-warm-brown" : "text-muted"
+                className={`text-[11px] font-inter font-semibold ${
+                  i <= step ? "text-warm-brown" : "text-muted/50"
                 }`}
               >
                 {s}
@@ -124,7 +197,7 @@ export default function LeadForm() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="bg-ivory rounded-2xl p-8 shadow-md border border-sand min-h-[280px] relative overflow-hidden">
+          <div className="bg-ivory rounded-2xl p-8 shadow-lg border border-sand min-h-[280px] relative overflow-hidden">
             {/* Step 1 */}
             {step === 0 && (
               <div className="flex flex-col gap-5 animate-[fadeIn_0.3s_ease]">
@@ -166,6 +239,28 @@ export default function LeadForm() {
                 <h3 className="font-playfair text-xl font-bold text-charcoal">
                   Space Configuration
                 </h3>
+                <div>
+                  <label className="block font-inter text-sm font-medium text-charcoal mb-2">
+                    Which plan are you interested in?
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {PLANS.map((plan) => (
+                      <button
+                        key={plan.label}
+                        type="button"
+                        onClick={() => setSelectedPlan(plan.label)}
+                        className={`flex-1 border rounded-xl p-3 cursor-pointer text-left transition-all ${
+                          selectedPlan === plan.label
+                            ? "border-warm-brown bg-warm-brown/10 text-warm-brown"
+                            : "border-sand text-charcoal hover:border-warm-brown/50"
+                        }`}
+                      >
+                        <div className="font-inter text-sm font-semibold">{plan.label}</div>
+                        {plan.sub && <div className="font-inter text-[11px] text-muted">{plan.sub}</div>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   {["2 BHK", "3 BHK", "4 BHK / Penthouse", "Independent Villa"].map(
                     (opt) => (
@@ -223,15 +318,15 @@ export default function LeadForm() {
                   {[
                     {
                       label: "Sleek & Minimal",
-                      swatch: "linear-gradient(135deg, #e0e7ef, #f8f9fa, #b0bec5)",
+                      swatch: "linear-gradient(135deg, #e8e0d4, #f8f4ee, #c8bfb0)",
                     },
                     {
                       label: "Warm & Traditional",
-                      swatch: "linear-gradient(135deg, #C4622D, #8B6914, #E8D5B0)",
+                      swatch: "linear-gradient(135deg, #7C4A1E, #B5651D, #E0CCAA)",
                     },
                     {
                       label: "Bold & Premium",
-                      swatch: "linear-gradient(135deg, #1a237e, #c8a600, #263238)",
+                      swatch: "linear-gradient(135deg, #2E1B0E, #B5651D, #7C4A1E)",
                     },
                   ].map((opt) => (
                     <button
@@ -410,12 +505,36 @@ export default function LeadForm() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block font-inter text-sm font-medium text-charcoal mb-2">
+                    Any additional work needed? <span className="text-muted font-normal">(optional)</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ADD_ONS.map((addon) => (
+                      <label key={addon} className="flex items-start gap-2 cursor-pointer font-inter text-[13px] text-charcoal/70 select-none">
+                        <input
+                          type="checkbox"
+                          checked={addOns.includes(addon)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAddOns([...addOns, addon]);
+                            } else {
+                              setAddOns(addOns.filter((a) => a !== addon));
+                            }
+                          }}
+                          className="accent-warm-brown mt-0.5 flex-shrink-0"
+                        />
+                        <span>{addon}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
           {/* Navigation */}
-          <div className="flex justify-between mt-6">
+          <div className="flex justify-between mt-5">
             {step > 0 ? (
               <button
                 type="button"
@@ -428,16 +547,23 @@ export default function LeadForm() {
               <div />
             )}
             {step < STEPS.length - 1 ? (
-              <Button type="button" variant="primary" onClick={next}>
+              <Button type="button" variant="primary" onClick={next} className="shadow-lg shadow-warm-brown/30">
                 Continue →
               </Button>
             ) : (
-              <Button type="submit" variant="primary" className="w-full">
+              <Button type="submit" variant="primary" className="w-full shadow-lg shadow-warm-brown/30 py-4 text-[15px]">
                 Engineer My Naksha →
               </Button>
             )}
           </div>
+          {step === STEPS.length - 1 && (
+            <p className="font-inter text-[11px] text-muted text-center mt-3">
+              🔒 Your details are private. No spam, ever.
+            </p>
+          )}
         </form>
+          </div>
+        </div>
       </div>
     </section>
   );

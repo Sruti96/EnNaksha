@@ -15,7 +15,7 @@ const steps = [
   {
     num: "03",
     title: "Approve the Budget",
-    desc: "Review a detailed cost breakdown. Zero hidden charges — everything locked in writing.",
+    desc: "Review a detailed cost breakdown. Your agreed scope is cost-locked — documented in writing before work begins.",
   },
   {
     num: "04",

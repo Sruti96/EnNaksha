@@ -9,14 +9,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        cream: "#F5F0E8",
-        sand: "#E8E0D0",
-        charcoal: "#2C2C2A",
-        "warm-brown": "#8B6914",
-        terracotta: "#C4622D",
-        forest: "#3B6D11",
-        muted: "#7A7269",
-        ivory: "#FAF7F2",
+        cream: "#F2E8D5",        // warm beige — page background
+        sand: "#E0CCAA",         // teak-washed linen — card backgrounds
+        charcoal: "#2E1B0E",     // deep walnut — primary text
+        "warm-brown": "#7C4A1E", // rich teak wood — primary CTA / accent
+        terracotta: "#B5651D",   // aged saffron / burnt sienna — highlights
+        forest: "#4A6741",       // muted sage — success / positive
+        muted: "#8C7355",        // warm taupe — secondary text
+        ivory: "#FBF5E6",        // warm cream — surface white
       },
       fontFamily: {
         playfair: ["var(--font-playfair)", "serif"],

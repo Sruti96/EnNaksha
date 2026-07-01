@@ -4,32 +4,32 @@ import AnimatedSection from "@/components/ui/AnimatedSection";
 const projects = [
   {
     label: "3 BHK | Whitefield",
-    gradient: "linear-gradient(160deg, #C4622D, #8B6914, #E8D5B0)",
+    gradient: "linear-gradient(160deg, #7C4A1E, #5C3310, #E0CCAA)",
     height: "h-64",
   },
   {
     label: "2 BHK | Sarjapur Road",
-    gradient: "linear-gradient(160deg, #8B6914, #E8E0D0, #C4622D)",
+    gradient: "linear-gradient(160deg, #5C3310, #E0CCAA, #B5651D)",
     height: "h-80",
   },
   {
     label: "Villa | Electronic City",
-    gradient: "linear-gradient(160deg, #F5F0E8, #8B6914, #C4622D)",
+    gradient: "linear-gradient(160deg, #F2E8D5, #7C4A1E, #B5651D)",
     height: "h-56",
   },
   {
     label: "3 BHK | Koramangala",
-    gradient: "linear-gradient(160deg, #2C2C2A, #8B6914, #E8D5B0)",
+    gradient: "linear-gradient(160deg, #2E1B0E, #7C4A1E, #E0CCAA)",
     height: "h-72",
   },
   {
     label: "Penthouse | Indiranagar",
-    gradient: "linear-gradient(160deg, #C4622D, #FAF7F2, #8B6914)",
+    gradient: "linear-gradient(160deg, #B5651D, #FBF5E6, #7C4A1E)",
     height: "h-60",
   },
   {
     label: "2 BHK | HSR Layout",
-    gradient: "linear-gradient(160deg, #8B6914, #C4622D, #F5F0E8)",
+    gradient: "linear-gradient(160deg, #7C4A1E, #B5651D, #F2E8D5)",
     height: "h-80",
   },
 ];
@@ -38,9 +38,12 @@ export default function Gallery() {
   return (
     <SectionWrapper id="gallery" className="bg-ivory py-20">
       <AnimatedSection>
-        <h2 className="font-playfair text-3xl sm:text-4xl font-bold text-charcoal text-center mb-12">
-          Our Work Speaks
-        </h2>
+        <div className="text-center mb-12">
+          <span className="font-inter text-[11px] uppercase tracking-[0.18em] text-warm-brown/70 mb-3 block">Portfolio</span>
+          <h2 className="font-playfair text-3xl sm:text-[42px] font-bold text-charcoal leading-tight">
+            Our Work Speaks
+          </h2>
+        </div>
       </AnimatedSection>
       <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
         {projects.map((project, i) => (
@@ -51,7 +54,7 @@ export default function Gallery() {
             >
               {/* Badge */}
               <div className="absolute top-3 left-3 z-10">
-                <span className="bg-charcoal/70 text-ivory text-xs font-inter font-semibold px-3 py-1.5 rounded-full">
+                <span className="bg-charcoal/70 text-ivory text-[13px] font-inter font-semibold px-3 py-1.5 rounded-full">
                   {project.label}
                 </span>
               </div>

@@ -1,79 +1,189 @@
-import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
+"use client";
+import { useState } from "react";
 import AnimatedSection from "@/components/ui/AnimatedSection";
+import InteriorCarousel from "@/components/ui/InteriorCarousel";
+import HowItWorksModal from "@/components/ui/HowItWorksModal";
+
+const journey = [
+  { icon: "📐", label: "Share Floor Plan", sub: "Free" },
+  { icon: "✏️", label: "2D Layout", sub: "Free · 48h" },
+  { icon: "🎨", label: "3D Design & Quote", sub: "Token fee" },
+  { icon: "✅", label: "Lock the Budget", sub: "Zero surprises" },
+  { icon: "🔨", label: "We Manage It", sub: "End-to-end" },
+  { icon: "🏡", label: "You Move In", sub: "On time" },
+];
+
+const stats = [
+  { value: "200+", label: "Homes Delivered" },
+  { value: "4.9★", label: "Client Rating" },
+  { value: "₹0", label: "Hidden Charges" },
+  { value: "48h", label: "Free Design" },
+];
+
+const trustBadges = [
+  "✓ Transparent BOQ — costs locked before work starts",
+  "✓ Weekly photo updates",
+  "✓ Free 2D layout — decide after you see our work",
+];
 
 export default function Hero() {
-  return (
-    <section className="bg-cream min-h-[90vh] flex items-center py-16">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Left column */}
-          <AnimatedSection>
-            <Badge variant="terracotta" className="mb-6">
-              Free 2D Layout in 48 hours
-            </Badge>
-            <h1 className="font-playfair text-[36px] sm:text-[48px] lg:text-[56px] font-bold leading-tight text-charcoal mb-6">
-              Your Dream Space.{" "}
-              <span className="relative inline-block text-warm-brown">
-                Zero Stress.
-                <span className="absolute bottom-0 left-0 w-full h-[3px] bg-warm-brown rounded-full" />
-              </span>
-            </h1>
-            <p className="font-inter text-lg text-muted leading-relaxed mb-8 max-w-xl">
-              A software-disciplined approach to premium home interiors — built
-              for urban Indian homeowners who value their time and their budget.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Button variant="primary" href="#contact">
-                Engineer My Naksha →
-              </Button>
-              <Button variant="ghost" href="#gallery">
-                See Our Work
-              </Button>
-            </div>
-          </AnimatedSection>
+  const [modalOpen, setModalOpen] = useState(false);
 
-          {/* Right column — decorative interior placeholder */}
-          <AnimatedSection className="relative">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl"
-              style={{
-                background:
-                  "linear-gradient(135deg, #C4622D 0%, #8B6914 30%, #E8E0D0 60%, #C4622D 100%)",
-                minHeight: "420px",
-              }}
-            >
-              {/* Inner decorative layers */}
-              <div
-                className="absolute inset-4 rounded-xl opacity-60"
-                style={{
-                  background:
-                    "linear-gradient(160deg, #FAF7F2 0%, #E8D5B0 40%, #8B6914 100%)",
-                }}
-              />
-              <div className="absolute inset-8 rounded-lg border-2 border-warm-brown/40 flex flex-col items-center justify-center gap-4">
-                {/* Decorative furniture silhouettes */}
-                <div className="w-32 h-1 bg-warm-brown/60 rounded-full mb-2" />
-                <div className="flex gap-3">
-                  <div className="w-16 h-20 bg-warm-brown/30 rounded-t-full border border-warm-brown/50" />
-                  <div className="w-24 h-24 bg-terracotta/20 rounded-lg border border-terracotta/40 flex items-end pb-2 justify-center">
-                    <div className="w-16 h-1.5 bg-terracotta/50 rounded" />
-                  </div>
-                  <div className="w-16 h-20 bg-warm-brown/30 rounded-t-full border border-warm-brown/50" />
-                </div>
-                <div className="w-40 h-0.5 bg-warm-brown/40 rounded" />
-                <p className="font-inter text-xs font-semibold text-warm-brown/80 uppercase tracking-widest mt-4 bg-ivory/70 px-4 py-2 rounded-full">
-                  3D Render Coming Soon
-                </p>
+  const next = new Date();
+  next.setMonth(next.getMonth() + 1);
+  const nextMonth = next.toLocaleString("en-IN", { month: "long" });
+
+  return (
+    <>
+      <section className="bg-cream min-h-[92vh] flex flex-col justify-center relative overflow-hidden">
+        {/* Subtle warm glow */}
+        <div
+          className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(181,101,29,0.08) 0%, transparent 70%)" }}
+        />
+
+        <div className="relative max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 w-full pt-14 pb-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center pb-14">
+
+            {/* Left column */}
+            <AnimatedSection>
+              {/* Eyebrow */}
+              <div className="inline-flex items-center gap-2 bg-warm-brown/10 border border-warm-brown/20 rounded-full px-4 py-1.5 mb-7">
+                <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse" />
+                <span className="font-inter text-[11px] font-semibold text-warm-brown uppercase tracking-[0.15em]">
+                  Free 2D Layout in 48 Hours
+                </span>
               </div>
-              {/* Corner accents */}
-              <div className="absolute top-4 left-4 w-8 h-8 border-t-2 border-l-2 border-ivory/60 rounded-tl" />
-              <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-ivory/60 rounded-tr" />
-              <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-ivory/60 rounded-bl" />
-              <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-ivory/60 rounded-br" />
+
+              {/* Headline */}
+              <h1 className="font-playfair font-bold leading-[1.1] text-charcoal tracking-tight mb-5">
+                <span className="block text-[38px] sm:text-[52px] lg:text-[58px]">Your Dream Space.</span>
+                <span className="relative inline-block text-[38px] sm:text-[52px] lg:text-[60px]">
+                  <span className="text-warm-brown italic">Zero Stress.</span>
+                  <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-warm-brown/40 rounded-full" />
+                </span>
+              </h1>
+
+              <p className="font-inter text-[17px] text-charcoal/65 leading-[1.85] mb-9 max-w-lg">
+                Transparent pricing, no hidden costs, zero surprises — from design to handover.
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-wrap gap-4 mb-5">
+                <a
+                  href="#plans"
+                  className="inline-flex items-center justify-center font-inter font-semibold px-8 py-4 rounded-xl bg-warm-brown text-ivory text-[15px] shadow-lg shadow-warm-brown/25 hover:bg-charcoal transition-all duration-200 active:scale-95"
+                >
+                  See Our Plans →
+                </a>
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="inline-flex items-center justify-center font-inter font-semibold px-8 py-4 rounded-xl border border-charcoal/20 text-charcoal text-[15px] hover:border-warm-brown hover:text-warm-brown transition-all duration-200"
+                >
+                  How It Works
+                </button>
+              </div>
+
+              {/* Trust badges */}
+              <div className="flex flex-wrap gap-2 mb-9">
+                {trustBadges.map((badge) => (
+                  <span
+                    key={badge}
+                    className="bg-sand text-charcoal text-[12px] px-3 py-1 rounded-full font-inter"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+
+              {/* Stat pills */}
+              <div className="grid grid-cols-4 gap-3">
+                {stats.map((s) => (
+                  <div key={s.label} className="bg-ivory border border-sand rounded-xl px-3 py-3 text-center shadow-sm">
+                    <div className="font-playfair text-[20px] font-bold text-warm-brown leading-none mb-1">{s.value}</div>
+                    <div className="font-inter text-[10px] text-muted leading-tight">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </AnimatedSection>
+
+            {/* Right column */}
+            <AnimatedSection className="relative lg:py-6">
+              <InteriorCarousel />
+
+              {/* Floating review chip */}
+              <a
+                href="#reviews"
+                className="absolute -bottom-4 -left-4 bg-ivory rounded-2xl shadow-xl px-4 py-3.5 border border-sand max-w-[210px] hover:shadow-2xl hover:border-warm-brown/30 transition-all duration-200 block group"
+              >
+                <div className="flex gap-0.5 mb-1">
+                  {[...Array(5)].map((_, i) => <span key={i} className="text-yellow-500 text-sm">★</span>)}
+                </div>
+                <p className="font-inter text-[11px] text-charcoal font-semibold leading-snug group-hover:text-warm-brown transition-colors">
+                  &quot;Zero surprise costs. Delivered on time.&quot;
+                </p>
+                <p className="font-inter text-[10px] text-muted mt-1">— Priya S., Sarjapur Rd</p>
+              </a>
+
+              {/* Floating urgency chip */}
+              <div className="absolute -top-4 -right-2 bg-terracotta text-ivory rounded-xl shadow-lg px-4 py-2.5 text-center">
+                <div className="font-inter text-[10px] font-semibold uppercase tracking-wider opacity-80">{nextMonth}</div>
+                <div className="font-playfair text-lg font-bold leading-none">4 slots left</div>
+              </div>
+            </AnimatedSection>
+          </div>
+
+          {/* Journey strip */}
+          <AnimatedSection>
+            <div className="border-t border-sand/60 pt-8 pb-10">
+              <p className="font-inter text-[11px] uppercase tracking-[0.18em] text-charcoal/40 text-center mb-8">
+                From enquiry to move-in — here&apos;s how it works
+              </p>
+
+              {/* Desktop */}
+              <div className="hidden sm:flex justify-center">
+                <div className="relative flex items-start">
+                  <div className="absolute top-[22px] left-[96px] right-[96px] h-px bg-warm-brown/30" />
+                  {journey.map((item, i) => (
+                    <div key={i} className="flex flex-col items-center text-center w-[148px] relative z-10">
+                      <div className="w-11 h-11 rounded-full border-2 border-warm-brown/30 flex items-center justify-center text-lg bg-cream">
+                        {item.icon}
+                      </div>
+                      <div className="font-inter text-[12px] font-semibold mt-2 leading-snug px-1 text-charcoal">
+                        {item.label}
+                      </div>
+                      <div className="font-inter text-[11px] mt-0.5 text-charcoal/45">
+                        {item.sub}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {journey.map((item, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-warm-brown/30 bg-cream flex items-center justify-center text-lg flex-shrink-0">
+                      {item.icon}
+                    </div>
+                    <div>
+                      <div className="font-inter text-[13px] font-semibold text-charcoal">
+                        {item.label}
+                      </div>
+                      <div className="font-inter text-[11px] text-muted/60">
+                        {item.sub}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </AnimatedSection>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {modalOpen && <HowItWorksModal onClose={() => setModalOpen(false)} />}
+    </>
   );
 }
