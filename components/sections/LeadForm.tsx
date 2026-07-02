@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Button from "@/components/ui/Button";
-import { saveLeadStep1, saveLeadFull } from "@/lib/leads";
+import { saveLeadFull } from "@/lib/leads";
 
 type FormData = {
   location: string;
@@ -65,7 +65,6 @@ export default function LeadForm() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
   const [submitted, setSubmitted] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("PMC Plan");
@@ -77,22 +76,8 @@ export default function LeadForm() {
   nextDate.setMonth(nextDate.getMonth() + 1);
   const nextMonth = nextDate.toLocaleString("en-IN", { month: "long" });
 
-  const next = async () => {
-    if (step === 0) {
-      const location = data.location.trim();
-      const email = data.email.trim();
-      if (!location || !email) return;
-
-      setSaving(true);
-      try {
-        await saveLeadStep1(location, email);
-      } catch {
-        // Continue even if the sheet is unreachable
-      } finally {
-        setSaving(false);
-      }
-    }
-
+  const next = () => {
+    if (step === 0 && (!data.location.trim() || !data.email.trim())) return;
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
@@ -594,10 +579,9 @@ export default function LeadForm() {
                 type="button"
                 variant="primary"
                 onClick={next}
-                disabled={saving}
                 className="shadow-lg shadow-warm-brown/30"
               >
-                {saving ? "Saving..." : "Continue →"}
+                Continue →
               </Button>
             ) : (
               <Button
