@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Button from "@/components/ui/Button";
+import { saveLeadStep1, saveLeadFull } from "@/lib/leads";
 
 type FormData = {
   location: string;
@@ -64,6 +65,8 @@ export default function LeadForm() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<FormData>(initialData);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("PMC Plan");
   const [addOns, setAddOns] = useState<string[]>([]);
@@ -74,12 +77,52 @@ export default function LeadForm() {
   nextDate.setMonth(nextDate.getMonth() + 1);
   const nextMonth = nextDate.toLocaleString("en-IN", { month: "long" });
 
-  const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  const next = async () => {
+    if (step === 0) {
+      const location = data.location.trim();
+      const email = data.email.trim();
+      if (!location || !email) return;
+
+      setSaving(true);
+      try {
+        await saveLeadStep1(location, email);
+      } catch {
+        // Continue even if the sheet is unreachable
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (submitting) return;
+
+    setSubmitting(true);
+    try {
+      await saveLeadFull({
+        location: data.location.trim(),
+        email: data.email.trim(),
+        plan: selectedPlan,
+        bhkType: data.bhkType,
+        homeSize: data.homeSize,
+        aesthetic: data.aesthetic,
+        timeline: data.timeline,
+        floorPlan: data.floorPlan?.name ?? "",
+        budget: data.budget,
+        fullName: data.fullName.trim(),
+        whatsapp: data.whatsapp.trim(),
+        addOns,
+      });
+    } catch {
+      // Still show success — data is best-effort captured on the server
+    } finally {
+      setSubmitting(false);
+      setSubmitted(true);
+    }
   };
 
   if (submitted) {
@@ -547,12 +590,23 @@ export default function LeadForm() {
               <div />
             )}
             {step < STEPS.length - 1 ? (
-              <Button type="button" variant="primary" onClick={next} className="shadow-lg shadow-warm-brown/30">
-                Continue →
+              <Button
+                type="button"
+                variant="primary"
+                onClick={next}
+                disabled={saving}
+                className="shadow-lg shadow-warm-brown/30"
+              >
+                {saving ? "Saving..." : "Continue →"}
               </Button>
             ) : (
-              <Button type="submit" variant="primary" className="w-full shadow-lg shadow-warm-brown/30 py-4 text-[15px]">
-                Engineer My Naksha →
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={submitting}
+                className="w-full shadow-lg shadow-warm-brown/30 py-4 text-[15px]"
+              >
+                {submitting ? "Submitting..." : "Engineer My Naksha →"}
               </Button>
             )}
           </div>
