@@ -2,13 +2,28 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export type RoomCategory =
   | "bedroom"
+  | "master_bedroom"
   | "living"
+  | "family"
   | "kitchen"
   | "bathroom"
+  | "powder"
   | "dining"
   | "foyer"
   | "balcony"
+  | "terrace"
   | "utility"
+  | "pantry"
+  | "pooja"
+  | "office"
+  | "study"
+  | "theater"
+  | "gym"
+  | "servant"
+  | "store"
+  | "staircase"
+  | "lift"
+  | "garage"
   | "other";
 
 export type Room = {
@@ -37,16 +52,16 @@ export type FloorPlanInput = {
   location?: string;
 };
 
-const MODEL = "claude-sonnet-4-5";
+export const CLAUDE_MODEL = "claude-sonnet-4-5";
 
-function planDimensions(homeSizeSqFt: number) {
+export function planDimensions(homeSizeSqFt: number) {
   // Assume a roughly 5:4 rectangular plot envelope sized off total sq ft.
   const width = Math.round(Math.sqrt(homeSizeSqFt * 1.25));
   const height = Math.round(homeSizeSqFt / width);
   return { width: Math.max(width, 10), height: Math.max(height, 10) };
 }
 
-function extractJson(text: string): string {
+export function extractJson(text: string): string {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fenced) return fenced[1].trim();
   const start = text.indexOf("{");
@@ -59,17 +74,152 @@ export function hasClaudeCredentials() {
   return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
-export async function generateFloorPlan(
-  input: FloorPlanInput
-): Promise<FloorPlanLayout> {
+export function getClaudeClient() {
   if (!hasClaudeCredentials()) {
     throw new Error("ANTHROPIC_API_KEY is not configured");
   }
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
+// ---------------------------------------------------------------------------
+// Shared geometry helpers — used by both FloorPlanSVG (rendering) and
+// architecturalPlan.ts (door/window schedules). Kept here so both can share
+// one source of truth instead of duplicating adjacency math.
+// ---------------------------------------------------------------------------
+
+export function categoryOf(room: Room): RoomCategory {
+  if (room.type) return room.type;
+  const n = room.name.toLowerCase();
+  if (n.includes("master")) return "master_bedroom";
+  if (n.includes("bed")) return "bedroom";
+  if (n.includes("family")) return "family";
+  if (n.includes("living") || n.includes("hall")) return "living";
+  if (n.includes("kitchen") || n.includes("pantry")) return "kitchen";
+  if (n.includes("powder")) return "powder";
+  if (n.includes("bath") || n.includes("toilet") || n.includes("wc")) return "bathroom";
+  if (n.includes("dining")) return "dining";
+  if (n.includes("foyer") || n.includes("entrance")) return "foyer";
+  if (n.includes("terrace")) return "terrace";
+  if (n.includes("balcony")) return "balcony";
+  if (n.includes("pooja") || n.includes("puja")) return "pooja";
+  if (n.includes("office")) return "office";
+  if (n.includes("study")) return "study";
+  if (n.includes("theater") || n.includes("theatre")) return "theater";
+  if (n.includes("gym")) return "gym";
+  if (n.includes("servant")) return "servant";
+  if (n.includes("store")) return "store";
+  if (n.includes("stair")) return "staircase";
+  if (n.includes("lift") || n.includes("elevator")) return "lift";
+  if (n.includes("garage") || n.includes("parking")) return "garage";
+  if (n.includes("utility") || n.includes("wash") || n.includes("laundry")) return "utility";
+  return "other";
+}
+
+const ADJACENCY_TOL = 1.5; // ft tolerance for shared-wall / boundary checks
+export const DOOR_LENGTH_FT = 2.6;
+
+export type DoorSpec = {
+  x: number;
+  y: number;
+  orientation: "h" | "v";
+  len: number;
+  swing: 1 | -1;
+  roomA?: string;
+  roomB?: string;
+  exterior?: boolean;
+};
+
+export type WindowSpec = {
+  x: number;
+  y: number;
+  orientation: "h" | "v";
+  len: number;
+  room?: string;
+};
+
+export function findDoors(rooms: Room[], totalWidth: number, totalHeight: number): DoorSpec[] {
+  const doors: DoorSpec[] = [];
+  const doorLen = DOOR_LENGTH_FT;
+
+  for (let i = 0; i < rooms.length; i++) {
+    for (let j = i + 1; j < rooms.length; j++) {
+      const a = rooms[i];
+      const b = rooms[j];
+      if (categoryOf(a) === "staircase" || categoryOf(b) === "staircase") continue;
+
+      if (Math.abs(a.x + a.width - b.x) < ADJACENCY_TOL || Math.abs(b.x + b.width - a.x) < ADJACENCY_TOL) {
+        const wallX = Math.abs(a.x + a.width - b.x) < ADJACENCY_TOL ? a.x + a.width : b.x + b.width;
+        const overlapStart = Math.max(a.y, b.y);
+        const overlapEnd = Math.min(a.y + a.height, b.y + b.height);
+        if (overlapEnd - overlapStart >= doorLen) {
+          const midY = (overlapStart + overlapEnd) / 2;
+          doors.push({ x: wallX, y: midY - doorLen / 2, orientation: "v", len: doorLen, swing: 1, roomA: a.name, roomB: b.name });
+        }
+      }
+
+      if (Math.abs(a.y + a.height - b.y) < ADJACENCY_TOL || Math.abs(b.y + b.height - a.y) < ADJACENCY_TOL) {
+        const wallY = Math.abs(a.y + a.height - b.y) < ADJACENCY_TOL ? a.y + a.height : b.y + b.height;
+        const overlapStart = Math.max(a.x, b.x);
+        const overlapEnd = Math.min(a.x + a.width, b.x + b.width);
+        if (overlapEnd - overlapStart >= doorLen) {
+          const midX = (overlapStart + overlapEnd) / 2;
+          doors.push({ x: midX - doorLen / 2, y: wallY, orientation: "h", len: doorLen, swing: 1, roomA: a.name, roomB: b.name });
+        }
+      }
+    }
+  }
+
+  const foyer = rooms.find((r) => categoryOf(r) === "foyer") || rooms[0];
+  if (foyer) {
+    const nearLeft = foyer.x < ADJACENCY_TOL;
+    const nearRight = Math.abs(foyer.x + foyer.width - totalWidth) < ADJACENCY_TOL;
+    const nearTop = foyer.y < ADJACENCY_TOL;
+    const nearBottom = Math.abs(foyer.y + foyer.height - totalHeight) < ADJACENCY_TOL;
+
+    if (nearBottom) {
+      doors.push({ x: foyer.x + foyer.width / 2 - doorLen / 2, y: totalHeight - 0.01, orientation: "h", len: doorLen, swing: -1, roomA: foyer.name, exterior: true });
+    } else if (nearTop) {
+      doors.push({ x: foyer.x + foyer.width / 2 - doorLen / 2, y: 0.01, orientation: "h", len: doorLen, swing: 1, roomA: foyer.name, exterior: true });
+    } else if (nearLeft) {
+      doors.push({ x: 0.01, y: foyer.y + foyer.height / 2 - doorLen / 2, orientation: "v", len: doorLen, swing: 1, roomA: foyer.name, exterior: true });
+    } else if (nearRight) {
+      doors.push({ x: totalWidth - 0.01, y: foyer.y + foyer.height / 2 - doorLen / 2, orientation: "v", len: doorLen, swing: -1, roomA: foyer.name, exterior: true });
+    }
+  }
+
+  return doors;
+}
+
+export function findWindows(rooms: Room[], totalWidth: number, totalHeight: number): WindowSpec[] {
+  const windows: WindowSpec[] = [];
+  const skip: RoomCategory[] = ["foyer", "utility", "staircase", "lift", "garage", "store"];
+
+  for (const r of rooms) {
+    const cat = categoryOf(r);
+    if (skip.includes(cat)) continue;
+    const winLen = Math.min(Math.max(r.width, r.height) * (cat === "bathroom" || cat === "powder" ? 0.25 : 0.4), 6);
+    if (winLen < 1.5) continue;
+
+    if (r.y < ADJACENCY_TOL && r.width >= winLen) {
+      windows.push({ x: r.x + r.width / 2 - winLen / 2, y: 0, orientation: "h", len: winLen, room: r.name });
+    } else if (Math.abs(r.y + r.height - totalHeight) < ADJACENCY_TOL && r.width >= winLen) {
+      windows.push({ x: r.x + r.width / 2 - winLen / 2, y: totalHeight, orientation: "h", len: winLen, room: r.name });
+    } else if (r.x < ADJACENCY_TOL && r.height >= winLen) {
+      windows.push({ x: 0, y: r.y + r.height / 2 - winLen / 2, orientation: "v", len: winLen, room: r.name });
+    } else if (Math.abs(r.x + r.width - totalWidth) < ADJACENCY_TOL && r.height >= winLen) {
+      windows.push({ x: totalWidth, y: r.y + r.height / 2 - winLen / 2, orientation: "v", len: winLen, room: r.name });
+    }
+  }
+
+  return windows;
+}
+
+export async function generateFloorPlan(
+  input: FloorPlanInput
+): Promise<FloorPlanLayout> {
   const homeSize = Number(input.homeSize) || 1000;
   const { width, height } = planDimensions(homeSize);
-
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const client = getClaudeClient();
 
   const prompt = `You are an architectural planner for EnNaksha, a home design company in India.
 
@@ -97,7 +247,7 @@ Respond with ONLY strict JSON, no markdown fences, no commentary, matching exact
 }`;
 
   const message = await client.messages.create({
-    model: MODEL,
+    model: CLAUDE_MODEL,
     max_tokens: 2000,
     messages: [{ role: "user", content: prompt }],
   });

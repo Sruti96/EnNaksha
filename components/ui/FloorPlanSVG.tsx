@@ -1,7 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { FloorPlanLayout, Room, RoomCategory } from "@/lib/floorplan";
+import {
+  categoryOf,
+  findDoors,
+  findWindows,
+  type FloorPlanLayout,
+  type Room,
+  type RoomCategory,
+  type DoorSpec,
+  type WindowSpec,
+} from "@/lib/floorplan";
 
 const SCALE = 22; // px per foot
 const WALL = 8; // wall stroke thickness (px)
@@ -9,36 +18,45 @@ const PAD_LEFT = 70;
 const PAD_TOP = 50;
 const PAD_RIGHT = 30;
 const PAD_BOTTOM = 130;
-const TOL = 1.5; // ft tolerance for adjacency / boundary checks
 const BG = "#FBF6EE";
 const INK = "#3a2a1a";
 const LINE = "#7C4A1E";
 
+export type StructuralColumn = { x: number; y: number };
+export type StructuralBeam = { x1: number; y1: number; x2: number; y2: number };
+export type UtilityMarker = {
+  x: number;
+  y: number;
+  label: string;
+  icon?: "electrical" | "plumbing" | "water";
+};
+
 const CATEGORY_COLORS: Record<RoomCategory, string> = {
   bedroom: "#F3ECE1",
+  master_bedroom: "#F0E7D8",
   living: "#EFE4D6",
+  family: "#EFE4D6",
   kitchen: "#E3D4BE",
   bathroom: "#E4ECEC",
+  powder: "#E4ECEC",
   dining: "#E8DAC4",
   foyer: "#EDE7DD",
   balcony: "#E3EAE2",
+  terrace: "#E3EAE2",
   utility: "#E5DED0",
+  pantry: "#E5DED0",
+  pooja: "#F5EFE0",
+  office: "#EDE3D2",
+  study: "#EDE3D2",
+  theater: "#E6DED2",
+  gym: "#E8E2D4",
+  servant: "#F0EAE0",
+  store: "#E5DED0",
+  staircase: "#DCD5C8",
+  lift: "#DCD5C8",
+  garage: "#DAD4C8",
   other: "#EDE7DD",
 };
-
-function categoryOf(room: Room): RoomCategory {
-  if (room.type) return room.type;
-  const n = room.name.toLowerCase();
-  if (n.includes("bed")) return "bedroom";
-  if (n.includes("living") || n.includes("hall")) return "living";
-  if (n.includes("kitchen")) return "kitchen";
-  if (n.includes("bath") || n.includes("toilet") || n.includes("wc")) return "bathroom";
-  if (n.includes("dining")) return "dining";
-  if (n.includes("foyer") || n.includes("entrance")) return "foyer";
-  if (n.includes("balcony") || n.includes("terrace")) return "balcony";
-  if (n.includes("utility") || n.includes("wash") || n.includes("store")) return "utility";
-  return "other";
-}
 
 function toPx(ft: number) {
   return ft * SCALE;
@@ -48,84 +66,6 @@ function X(ft: number) {
 }
 function Y(ft: number) {
   return PAD_TOP + toPx(ft);
-}
-
-type DoorSpec = { x: number; y: number; orientation: "h" | "v"; len: number; swing: 1 | -1 };
-type WindowSpec = { x: number; y: number; orientation: "h" | "v"; len: number };
-
-function findDoors(rooms: Room[], totalWidth: number, totalHeight: number): DoorSpec[] {
-  const doors: DoorSpec[] = [];
-  const doorLen = 2.6;
-
-  for (let i = 0; i < rooms.length; i++) {
-    for (let j = i + 1; j < rooms.length; j++) {
-      const a = rooms[i];
-      const b = rooms[j];
-
-      if (Math.abs(a.x + a.width - b.x) < TOL || Math.abs(b.x + b.width - a.x) < TOL) {
-        const wallX = Math.abs(a.x + a.width - b.x) < TOL ? a.x + a.width : b.x + b.width;
-        const overlapStart = Math.max(a.y, b.y);
-        const overlapEnd = Math.min(a.y + a.height, b.y + b.height);
-        if (overlapEnd - overlapStart >= doorLen) {
-          const midY = (overlapStart + overlapEnd) / 2;
-          doors.push({ x: wallX, y: midY - doorLen / 2, orientation: "v", len: doorLen, swing: 1 });
-        }
-      }
-
-      if (Math.abs(a.y + a.height - b.y) < TOL || Math.abs(b.y + b.height - a.y) < TOL) {
-        const wallY = Math.abs(a.y + a.height - b.y) < TOL ? a.y + a.height : b.y + b.height;
-        const overlapStart = Math.max(a.x, b.x);
-        const overlapEnd = Math.min(a.x + a.width, b.x + b.width);
-        if (overlapEnd - overlapStart >= doorLen) {
-          const midX = (overlapStart + overlapEnd) / 2;
-          doors.push({ x: midX - doorLen / 2, y: wallY, orientation: "h", len: doorLen, swing: 1 });
-        }
-      }
-    }
-  }
-
-  const foyer = rooms.find((r) => categoryOf(r) === "foyer") || rooms[0];
-  if (foyer) {
-    const nearLeft = foyer.x < TOL;
-    const nearRight = Math.abs(foyer.x + foyer.width - totalWidth) < TOL;
-    const nearTop = foyer.y < TOL;
-    const nearBottom = Math.abs(foyer.y + foyer.height - totalHeight) < TOL;
-
-    if (nearBottom) {
-      doors.push({ x: foyer.x + foyer.width / 2 - doorLen / 2, y: totalHeight - 0.01, orientation: "h", len: doorLen, swing: -1 });
-    } else if (nearTop) {
-      doors.push({ x: foyer.x + foyer.width / 2 - doorLen / 2, y: 0.01, orientation: "h", len: doorLen, swing: 1 });
-    } else if (nearLeft) {
-      doors.push({ x: 0.01, y: foyer.y + foyer.height / 2 - doorLen / 2, orientation: "v", len: doorLen, swing: 1 });
-    } else if (nearRight) {
-      doors.push({ x: totalWidth - 0.01, y: foyer.y + foyer.height / 2 - doorLen / 2, orientation: "v", len: doorLen, swing: -1 });
-    }
-  }
-
-  return doors;
-}
-
-function findWindows(rooms: Room[], totalWidth: number, totalHeight: number): WindowSpec[] {
-  const windows: WindowSpec[] = [];
-  const skip: RoomCategory[] = ["foyer", "bathroom", "utility"];
-
-  for (const r of rooms) {
-    if (skip.includes(categoryOf(r))) continue;
-    const winLen = Math.min(Math.max(r.width, r.height) * 0.4, 6);
-    if (winLen < 2) continue;
-
-    if (r.y < TOL && r.width >= winLen) {
-      windows.push({ x: r.x + r.width / 2 - winLen / 2, y: 0, orientation: "h", len: winLen });
-    } else if (Math.abs(r.y + r.height - totalHeight) < TOL && r.width >= winLen) {
-      windows.push({ x: r.x + r.width / 2 - winLen / 2, y: totalHeight, orientation: "h", len: winLen });
-    } else if (r.x < TOL && r.height >= winLen) {
-      windows.push({ x: 0, y: r.y + r.height / 2 - winLen / 2, orientation: "v", len: winLen });
-    } else if (Math.abs(r.x + r.width - totalWidth) < TOL && r.height >= winLen) {
-      windows.push({ x: totalWidth, y: r.y + r.height / 2 - winLen / 2, orientation: "v", len: winLen });
-    }
-  }
-
-  return windows;
 }
 
 function DoorIcon({ door }: { door: DoorSpec }) {
@@ -334,22 +274,185 @@ function UtilityIcon({ room }: { room: Room }) {
   );
 }
 
+function ShelfIcon({ room }: { room: Room }) {
+  const x0 = X(room.x + 0.5);
+  const y0 = Y(room.y + 0.5);
+  const w = toPx(Math.min(room.width - 1, 5));
+  const h = toPx(Math.min(room.height - 1, 2.2));
+  if (w < 20 || h < 15) return null;
+  return (
+    <g>
+      <rect x={x0} y={y0} width={w} height={h} fill="#fff" stroke={LINE} strokeWidth={1} />
+      {[0.33, 0.66].map((f, i) => (
+        <line key={i} x1={x0} y1={y0 + h * f} x2={x0 + w} y2={y0 + h * f} stroke={LINE} strokeWidth={0.75} />
+      ))}
+    </g>
+  );
+}
+
+function PoojaIcon({ room }: { room: Room }) {
+  const cx = X(room.x + room.width / 2);
+  const baseY = Y(room.y + room.height - 0.6);
+  const w = toPx(Math.min(room.width - 1, 2.5));
+  const h = toPx(1.6);
+  if (w < 10) return null;
+  return (
+    <g>
+      <rect x={cx - w / 2} y={baseY - h} width={w} height={h} fill="#fff" stroke="#B5651D" strokeWidth={1} />
+      <path
+        d={`M ${cx - w / 2 - 3} ${baseY - h} L ${cx} ${baseY - h - 12} L ${cx + w / 2 + 3} ${baseY - h} Z`}
+        fill="#EAD9C2"
+        stroke="#B5651D"
+        strokeWidth={0.75}
+      />
+    </g>
+  );
+}
+
+function DeskIcon({ room }: { room: Room }) {
+  const x0 = X(room.x + 0.6);
+  const y0 = Y(room.y + 0.6);
+  const w = toPx(Math.min(room.width - 1.2, 4));
+  const d = toPx(1.6);
+  if (w < 20) return null;
+  return (
+    <g>
+      <rect x={x0} y={y0} width={w} height={d} fill="#fff" stroke={LINE} strokeWidth={1} />
+      <rect x={x0 + w * 0.35} y={y0 + d + 4} width={w * 0.3} height={d * 0.7} fill="#EAD9C2" stroke={LINE} strokeWidth={0.75} />
+    </g>
+  );
+}
+
+function TheaterIcon({ room }: { room: Room }) {
+  const y0 = Y(room.y + room.height - 1.6);
+  const x0 = X(room.x + 0.8);
+  const seatW = toPx(1.2);
+  const gap = toPx(0.3);
+  const count = Math.min(4, Math.max(2, Math.floor(room.width / 1.8)));
+  const seats: ReactNode[] = [];
+  for (let i = 0; i < count; i++) {
+    seats.push(
+      <rect key={i} x={x0 + i * (seatW + gap)} y={y0} width={seatW} height={toPx(1.2)} rx={2} fill="#fff" stroke={LINE} strokeWidth={0.75} />
+    );
+  }
+  const screenY = Y(room.y + 0.5);
+  return (
+    <g>
+      <line x1={X(room.x + 0.6)} y1={screenY} x2={X(room.x + room.width - 0.6)} y2={screenY} stroke={INK} strokeWidth={3} />
+      {seats}
+    </g>
+  );
+}
+
+function GymIcon({ room }: { room: Room }) {
+  const x0 = X(room.x + 0.6);
+  const y0 = Y(room.y + 0.6);
+  const w = toPx(Math.min(room.width - 1.2, 3));
+  const h = toPx(1.2);
+  if (w < 15) return null;
+  return (
+    <g>
+      <rect x={x0} y={y0} width={w} height={h} rx={2} fill="#fff" stroke={LINE} strokeWidth={1} />
+      <circle cx={x0 + w + 14} cy={y0 + h / 2} r={7} fill="none" stroke={LINE} strokeWidth={1} />
+    </g>
+  );
+}
+
+function GarageIcon({ room }: { room: Room }) {
+  const x0 = X(room.x + 0.8);
+  const y0 = Y(room.y + 0.8);
+  const w = toPx(Math.min(room.width - 1.6, 8));
+  const h = toPx(Math.min(room.height - 1.6, 5));
+  if (w < 20 || h < 20) return null;
+  return (
+    <g>
+      <rect x={x0} y={y0} width={w} height={h} rx={h * 0.25} fill="#fff" stroke={LINE} strokeWidth={1} />
+      <circle cx={x0 + w * 0.2} cy={y0 + h} r={h * 0.12} fill={INK} />
+      <circle cx={x0 + w * 0.8} cy={y0 + h} r={h * 0.12} fill={INK} />
+    </g>
+  );
+}
+
+function LiftIcon({ room }: { room: Room }) {
+  const x0 = X(room.x + 0.4);
+  const y0 = Y(room.y + 0.4);
+  const w = toPx(Math.min(room.width - 0.8, room.height - 0.8, 4));
+  if (w < 15) return null;
+  return (
+    <g>
+      <rect x={x0} y={y0} width={w} height={w} fill="#fff" stroke={LINE} strokeWidth={1} />
+      <line x1={x0} y1={y0} x2={x0 + w} y2={y0 + w} stroke={LINE} strokeWidth={0.75} />
+      <line x1={x0 + w} y1={y0} x2={x0} y2={y0 + w} stroke={LINE} strokeWidth={0.75} />
+    </g>
+  );
+}
+
+function StaircaseIcon({ room }: { room: Room }) {
+  const x0 = X(room.x);
+  const y0 = Y(room.y);
+  const w = toPx(room.width);
+  const h = toPx(room.height);
+  const treads = Math.max(6, Math.min(14, Math.round(room.height * 1.2)));
+  const lines: ReactNode[] = [];
+  for (let i = 1; i < treads; i++) {
+    const ty = y0 + (h * i) / treads;
+    lines.push(<line key={i} x1={x0} y1={ty} x2={x0 + w} y2={ty} stroke={LINE} strokeWidth={0.5} />);
+  }
+  return (
+    <g>
+      {lines}
+      <path
+        d={`M ${x0 + w / 2} ${y0 + h * 0.85} L ${x0 + w / 2} ${y0 + h * 0.2} M ${x0 + w / 2 - 5} ${y0 + h * 0.3} L ${x0 + w / 2} ${y0 + h * 0.2} L ${x0 + w / 2 + 5} ${y0 + h * 0.3}`}
+        fill="none"
+        stroke={INK}
+        strokeWidth={1.5}
+      />
+      <text x={x0 + w / 2} y={y0 + h * 0.95} textAnchor="middle" fontSize={8} fontFamily="Inter, sans-serif" fill={INK}>
+        UP
+      </text>
+    </g>
+  );
+}
+
 function Furniture({ room }: { room: Room }) {
   switch (categoryOf(room)) {
     case "bedroom":
+    case "master_bedroom":
+    case "servant":
       return <BedIcon room={room} />;
     case "living":
+    case "family":
       return <SofaIcon room={room} />;
     case "dining":
       return <DiningIcon room={room} />;
     case "kitchen":
       return <KitchenIcon room={room} />;
     case "bathroom":
+    case "powder":
       return <BathroomIcon room={room} />;
     case "balcony":
+    case "terrace":
       return <BalconyIcon room={room} />;
     case "utility":
       return <UtilityIcon room={room} />;
+    case "pantry":
+    case "store":
+      return <ShelfIcon room={room} />;
+    case "pooja":
+      return <PoojaIcon room={room} />;
+    case "office":
+    case "study":
+      return <DeskIcon room={room} />;
+    case "theater":
+      return <TheaterIcon room={room} />;
+    case "gym":
+      return <GymIcon room={room} />;
+    case "garage":
+      return <GarageIcon room={room} />;
+    case "lift":
+      return <LiftIcon room={room} />;
+    case "staircase":
+      return <StaircaseIcon room={room} />;
     default:
       return null;
   }
@@ -418,10 +521,68 @@ function CompassAndScale({ x, y }: { x: number; y: number }) {
   );
 }
 
-export default function FloorPlanSVG({ layout }: { layout: FloorPlanLayout }) {
+function StructuralGrid({ columns, beams }: { columns: StructuralColumn[]; beams: StructuralBeam[] }) {
+  return (
+    <g>
+      {beams.map((b, i) => (
+        <line
+          key={i}
+          x1={X(b.x1)}
+          y1={Y(b.y1)}
+          x2={X(b.x2)}
+          y2={Y(b.y2)}
+          stroke="#8a8478"
+          strokeWidth={1}
+          strokeDasharray="5,3"
+          opacity={0.7}
+        />
+      ))}
+      {columns.map((c, i) => (
+        <rect key={i} x={X(c.x) - 4} y={Y(c.y) - 4} width={8} height={8} fill="#6b6459" opacity={0.85} />
+      ))}
+    </g>
+  );
+}
+
+const UTILITY_GLYPH: Record<NonNullable<UtilityMarker["icon"]>, string> = {
+  electrical: "EP",
+  plumbing: "PS",
+  water: "WT",
+};
+
+function UtilityMarkers({ utilities }: { utilities: UtilityMarker[] }) {
+  return (
+    <g fontFamily="Inter, sans-serif" fontSize={8} fill="#2E1B0E">
+      {utilities.map((u, i) => (
+        <g key={i}>
+          <circle cx={X(u.x)} cy={Y(u.y)} r={9} fill="#fff" stroke="#8a5a2b" strokeWidth={1.25} />
+          <text x={X(u.x)} y={Y(u.y) + 3} textAnchor="middle" fontWeight={700}>
+            {u.icon ? UTILITY_GLYPH[u.icon] : "U"}
+          </text>
+          <text x={X(u.x)} y={Y(u.y) + 20} textAnchor="middle" fontSize={7}>
+            {u.label}
+          </text>
+        </g>
+      ))}
+    </g>
+  );
+}
+
+export default function FloorPlanSVG({
+  layout,
+  columns,
+  beams,
+  utilities,
+}: {
+  layout: FloorPlanLayout;
+  columns?: StructuralColumn[];
+  beams?: StructuralBeam[];
+  utilities?: UtilityMarker[];
+}) {
   const rooms = layout.rooms;
   const doors = findDoors(rooms, layout.totalWidth, layout.totalHeight);
   const windows = findWindows(rooms, layout.totalWidth, layout.totalHeight);
+  const hasStructuralGrid = Boolean(columns?.length || beams?.length);
 
   const canvasWidth = PAD_LEFT + toPx(layout.totalWidth) + PAD_RIGHT;
   const canvasHeight = PAD_TOP + toPx(layout.totalHeight) + PAD_BOTTOM;
@@ -482,6 +643,8 @@ export default function FloorPlanSVG({ layout }: { layout: FloorPlanLayout }) {
             />
           ))}
 
+          {hasStructuralGrid && <StructuralGrid columns={columns ?? []} beams={beams ?? []} />}
+
           {windows.map((w, i) => (
             <WindowIcon key={i} win={w} />
           ))}
@@ -517,8 +680,23 @@ export default function FloorPlanSVG({ layout }: { layout: FloorPlanLayout }) {
             </g>
           ))}
 
+          {utilities && utilities.length > 0 && <UtilityMarkers utilities={utilities} />}
+
           <Legend x={PAD_LEFT} y={Y(layout.totalHeight) + 30} />
           <CompassAndScale x={canvasWidth - 130} y={Y(layout.totalHeight) + 15} />
+
+          {hasStructuralGrid && (
+            <text
+              x={X(0)}
+              y={canvasHeight - 8}
+              fontFamily="Inter, sans-serif"
+              fontSize={9}
+              fill="#8a5a2b"
+              fontStyle="italic"
+            >
+              Structural grid shown is indicative only — verify with a licensed structural engineer.
+            </text>
+          )}
         </svg>
       </div>
       {layout.notes && <p className="font-inter text-xs text-muted mt-3 italic">{layout.notes}</p>}
