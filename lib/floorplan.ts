@@ -1,7 +1,19 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+export type RoomCategory =
+  | "bedroom"
+  | "living"
+  | "kitchen"
+  | "bathroom"
+  | "dining"
+  | "foyer"
+  | "balcony"
+  | "utility"
+  | "other";
+
 export type Room = {
   name: string;
+  type?: RoomCategory;
   x: number;
   y: number;
   width: number;
@@ -71,14 +83,16 @@ Design a 2D floor plan layout for this client:
 
 The plot envelope is exactly ${width} ft (width) x ${height} ft (height). Origin (0,0) is the top-left corner, x increases to the right, y increases downward. All measurements are in feet.
 
-Place every room required for the given BHK type (bedrooms, hall/living room, kitchen, bathrooms, balcony if space allows) as non-overlapping rectangles that together fill the envelope reasonably (small gaps for walls are fine, but do not let rooms overlap or extend outside the envelope). Room sizes should be realistic for Indian homes of this size and reflect the requested aesthetic in the "notes" field.
+Place every room required for the given BHK type (bedrooms, hall/living room, kitchen, bathrooms, dining area, foyer/entrance, balcony and utility area if space allows) as non-overlapping rectangles that together fill the envelope reasonably (small gaps for walls are fine, but do not let rooms overlap or extend outside the envelope). Include exactly one foyer/entrance room touching the outer boundary — that is where the main entrance door will be drawn. Room sizes should be realistic for Indian homes of this size and reflect the requested aesthetic in the "notes" field.
+
+Every room must have a "type" set to exactly one of: "bedroom", "living", "kitchen", "bathroom", "dining", "foyer", "balcony", "utility", "other" — this controls which furniture icons get drawn, so pick the closest match even if the room name is more specific (e.g. "Master Bedroom" -> type "bedroom").
 
 Respond with ONLY strict JSON, no markdown fences, no commentary, matching exactly this schema:
 {
   "title": string,
   "totalWidth": ${width},
   "totalHeight": ${height},
-  "rooms": [ { "name": string, "x": number, "y": number, "width": number, "height": number } ],
+  "rooms": [ { "name": string, "type": string, "x": number, "y": number, "width": number, "height": number } ],
   "notes": string
 }`;
 
