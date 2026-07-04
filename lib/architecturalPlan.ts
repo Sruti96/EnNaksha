@@ -7,6 +7,8 @@ import {
   findDoors,
   findWindows,
   findVentilationViolations,
+  computeSpaceUtilization,
+  MIN_SPACE_UTILIZATION,
   hasClaudeCredentials,
   type Room,
   type FloorPlanLayout,
@@ -289,6 +291,16 @@ Client brief:
 
 Distribute rooms sensibly across floors: put shared/public rooms (foyer, living/family room, dining, kitchen, one guest bedroom, powder room, utility) on the ground floor along with parking/garage access; put most bedrooms with attached bathrooms on upper floors for privacy; place special rooms wherever they best fit (e.g. home office/study on a quieter floor, pooja room per Vastu guidance if requested, terrace on the top floor).
 
+Use these real, research-based Indian residential room size standards (aligned with National Building Code / RERA norms) as your baseline — size rooms at least at the minimum, and prefer the ideal size where the footprint allows:
+- Bedroom: minimum 10x10 ft, ideal 12x15 ft
+- Master Bedroom: minimum 12x12 ft, ideal 12x15 ft or larger
+- Living/Family room: minimum 12x15 ft, ideal up to 15x20 ft
+- Kitchen: minimum 8x10 ft, ideal 10x12 ft
+- Bathroom: minimum 5x7 ft, ideal 7x10 ft
+- Dining area: at least 10x10 ft where space allows
+
+Fill each floor's footprint — do not leave unused/dead floor area. Rooms on a given floor together should cover at least 90% of that floor's footprint area (the rest accounts for walls/circulation, and the staircase void if any). If there's leftover space, enlarge the living/family room, kitchen, dining area, or bedrooms toward the ideal sizes above, or add a sensible extra room — never leave a gap that isn't part of any room.
+
 Follow these real-world architectural rules on every floor, the same way a licensed architect would:
 - The foyer (ground floor) must touch the floor's exterior boundary and open into the living/family room — never directly into a bedroom or bathroom.
 - Every bedroom, the living/family room, kitchen, and dining area on a given floor MUST have at least one full side flush against that floor's exterior boundary (x=0, x=${footprint.width.toFixed(1)}, y=0, or y=${footprint.height.toFixed(1)}) so it can have a real window. A habitable room sealed on all sides with no exterior wall is not a valid design.
@@ -324,19 +336,35 @@ There must be exactly ${input.floors} entries in "floors", with "level" 0 to ${i
     }))
     .filter((f) => f.violations.length > 0);
 
-  if (violationsByFloor.length > 0) {
-    const description = violationsByFloor
-      .map((f) => `Floor ${f.level}: ${f.violations.map((v) => `"${v.name}"`).join(", ")}`)
-      .join("; ");
+  const utilizationByFloor = parsed.floors
+    .map((f) => ({ level: f.level, utilization: computeSpaceUtilization(f.rooms, footprint.width, footprint.height) }))
+    .filter((f) => f.utilization < MIN_SPACE_UTILIZATION);
+
+  if (violationsByFloor.length > 0 || utilizationByFloor.length > 0) {
+    const issues: string[] = [];
+    if (violationsByFloor.length > 0) {
+      const description = violationsByFloor
+        .map((f) => `Floor ${f.level}: ${f.violations.map((v) => `"${v.name}"`).join(", ")}`)
+        .join("; ");
+      issues.push(
+        `The following rooms are not touching any exterior wall of their floor (x=0, x=${footprint.width.toFixed(
+          1
+        )}, y=0, or y=${footprint.height.toFixed(
+          1
+        )}), but a room of that type must have a real window/be open to the outside — a balcony or terrace in particular cannot be landlocked in the interior: ${description}. Fix the position/size of the affected room(s) on each listed floor so each has a full side flush against an exterior boundary.`
+      );
+    }
+    if (utilizationByFloor.length > 0) {
+      const description = utilizationByFloor.map((f) => `Floor ${f.level} (~${Math.round(f.utilization * 100)}% covered)`).join(", ");
+      issues.push(
+        `These floors leave too much unused floor area: ${description}. Real Indian homes use at least ~90% of the footprint (per NBC/RERA-aligned planning norms). Enlarge the living/family room, kitchen, dining area, and/or bedrooms toward their ideal sizes, or add a sensible extra room, to fill the remaining space on those floors.`
+      );
+    }
 
     messages.push({ role: "assistant", content: JSON.stringify(parsed) });
     messages.push({
       role: "user",
-      content: `This plan is invalid: the following rooms are not touching any exterior wall of their floor (x=0, x=${footprint.width.toFixed(
-        1
-      )}, y=0, or y=${footprint.height.toFixed(
-        1
-      )}), but a room of that type must have a real window/be open to the outside — a balcony or terrace in particular cannot be landlocked in the interior. ${description}. Fix ONLY the position/size of the affected room(s) on each listed floor so each has a full side flush against an exterior boundary, keeping every other room unchanged and still non-overlapping. Respond with ONLY the corrected strict JSON, same schema as before, no commentary.`,
+      content: `This plan needs fixes: ${issues.join(" ")} Keep every other room that's already fine unchanged and make sure rooms still don't overlap. Respond with ONLY the corrected strict JSON, same schema as before, no commentary.`,
     });
 
     try {
@@ -346,7 +374,12 @@ There must be exactly ${input.floors} entries in "floors", with "level" 0 to ${i
         0
       );
       const originalViolations = violationsByFloor.reduce((sum, f) => sum + f.violations.length, 0);
-      if (correctedViolations < originalViolations) {
+      const correctedUtilization =
+        corrected.floors.reduce((sum, f) => sum + computeSpaceUtilization(f.rooms, footprint.width, footprint.height), 0) /
+        corrected.floors.length;
+      const originalUtilization =
+        parsed.floors.reduce((sum, f) => sum + computeSpaceUtilization(f.rooms, footprint.width, footprint.height), 0) / parsed.floors.length;
+      if (correctedViolations <= originalViolations && correctedUtilization >= originalUtilization) {
         parsed = corrected;
       }
     } catch {

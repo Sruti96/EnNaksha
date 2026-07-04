@@ -185,6 +185,21 @@ export function findVentilationViolations(rooms: Room[], totalWidth: number, tot
   });
 }
 
+/** Minimum fraction of the envelope that should be covered by named rooms. */
+export const MIN_SPACE_UTILIZATION = 0.85;
+
+/**
+ * Fraction of the envelope's area that's actually covered by rooms. Real
+ * Indian homes use the plot efficiently — leftover "dead" floor area beyond
+ * what walls/corridors need is a sign Claude under-filled the plan.
+ */
+export function computeSpaceUtilization(rooms: Room[], totalWidth: number, totalHeight: number): number {
+  const envelopeArea = totalWidth * totalHeight;
+  if (envelopeArea <= 0) return 1;
+  const roomArea = rooms.reduce((sum, r) => sum + r.width * r.height, 0);
+  return roomArea / envelopeArea;
+}
+
 const ENSUITE_NAME_RE = /attach|ensuite|en-suite|en suite|master.*(bath|wash|toilet)/i;
 
 /** A private/ensuite bathroom should only ever connect to the one bedroom it belongs to. */
@@ -362,6 +377,16 @@ The plot envelope is exactly ${width} ft (width) x ${height} ft (height). Origin
 
 Place every room required for the given BHK type (bedrooms, hall/living room, kitchen, bathrooms, dining area, foyer/entrance, balcony and utility area if space allows) as non-overlapping rectangles that together fill the envelope reasonably (small gaps for walls are fine, but do not let rooms overlap or extend outside the envelope). Room sizes should be realistic for Indian homes of this size and reflect the requested aesthetic in the "notes" field.
 
+Use these real, research-based Indian residential room size standards (aligned with National Building Code / RERA norms) as your baseline — size rooms at least at the minimum, and prefer the ideal size where the envelope allows, rather than shrinking every room to leave gaps:
+- Bedroom: minimum 10x10 ft, ideal 12x15 ft
+- Master Bedroom: minimum 12x12 ft, ideal 12x15 ft or larger
+- Living/Hall: minimum 12x15 ft, ideal up to 15x20 ft
+- Kitchen: minimum 8x10 ft, ideal 10x12 ft
+- Bathroom: minimum 5x7 ft, ideal 7x10 ft
+- Dining area: at least 10x10 ft where space allows
+
+Fill the envelope — do not leave unused/dead floor area. Rooms together should cover at least 90% of the total envelope area (the rest accounts for walls/circulation). If there's leftover space after placing the required rooms, enlarge the living room, kitchen, dining area, or bedrooms toward the ideal sizes above, or add a sensible extra room (store, utility nook, larger balcony) — never leave a gap that isn't part of any room.
+
 Follow these real-world architectural rules, the same way a licensed architect would:
 - The foyer/entrance MUST touch the outer boundary (that's where the main entrance door is drawn), and must open into the living/hall — never directly into a bedroom or bathroom.
 - Every bedroom, the living/hall, the kitchen, and the dining area MUST have at least one full side flush against the building's outer boundary (x=0, x=${width}, y=0, or y=${height}) so it can have a real window — a habitable room sealed on all four sides with no exterior wall is not a valid design.
@@ -387,17 +412,33 @@ Respond with ONLY strict JSON, no markdown fences, no commentary, matching exact
   let layout = await requestFloorPlanCompletion(client, messages, input, width, height);
 
   const violations = findVentilationViolations(layout.rooms, layout.totalWidth, layout.totalHeight);
-  if (violations.length > 0) {
+  const utilization = computeSpaceUtilization(layout.rooms, layout.totalWidth, layout.totalHeight);
+  const underfilled = utilization < MIN_SPACE_UTILIZATION;
+
+  if (violations.length > 0 || underfilled) {
+    const issues: string[] = [];
+    if (violations.length > 0) {
+      issues.push(
+        `${violations.map((v) => `"${v.name}"`).join(", ")} ${violations.length > 1 ? "are" : "is"} not touching any exterior wall (x=0, x=${width}, y=0, or y=${height}), but a room of that type must have a real window/be open to the outside — a balcony in particular cannot be landlocked in the interior. Fix the position/size of the affected room(s) so each has a full side flush against an exterior boundary.`
+      );
+    }
+    if (underfilled) {
+      issues.push(
+        `Only about ${Math.round(utilization * 100)}% of the ${width}x${height} ft envelope is covered by rooms — real Indian homes use at least ~90% of the plot (per NBC/RERA-aligned planning norms). Enlarge the living room, kitchen, dining area, and/or bedrooms toward their ideal sizes, or add a sensible extra room, to fill the remaining floor area.`
+      );
+    }
+
     messages.push({ role: "assistant", content: JSON.stringify(layout) });
     messages.push({
       role: "user",
-      content: `This layout is invalid: ${violations
-        .map((v) => `"${v.name}"`)
-        .join(", ")} ${violations.length > 1 ? "are" : "is"} not touching any exterior wall (x=0, x=${width}, y=0, or y=${height}), but a room of that type must have a real window/be open to the outside — a balcony in particular cannot be landlocked in the interior. Fix ONLY the position/size of the affected room(s) so each has a full side flush against an exterior boundary, keeping every other room unchanged and still non-overlapping. Respond with ONLY the corrected strict JSON, same schema as before, no commentary.`,
+      content: `This layout needs fixes: ${issues.join(" ")} Keep every other room that's already fine unchanged and make sure rooms still don't overlap. Respond with ONLY the corrected strict JSON, same schema as before, no commentary.`,
     });
+
     try {
       const corrected = await requestFloorPlanCompletion(client, messages, input, width, height);
-      if (findVentilationViolations(corrected.rooms, corrected.totalWidth, corrected.totalHeight).length < violations.length) {
+      const correctedViolations = findVentilationViolations(corrected.rooms, corrected.totalWidth, corrected.totalHeight).length;
+      const correctedUtilization = computeSpaceUtilization(corrected.rooms, corrected.totalWidth, corrected.totalHeight);
+      if (correctedViolations <= violations.length && correctedUtilization >= utilization) {
         layout = corrected;
       }
     } catch {
