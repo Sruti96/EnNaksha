@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import {
   getClaudeClient,
   CLAUDE_MODEL,
@@ -5,6 +6,7 @@ import {
   categoryOf,
   findDoors,
   findWindows,
+  findVentilationViolations,
   hasClaudeCredentials,
   type Room,
   type FloorPlanLayout,
@@ -269,7 +271,7 @@ async function requestRoomLayout(
     ? `A staircase MUST be included on every floor as a room named "Staircase" with type "staircase" at exactly x=${staircaseRoom.x.toFixed(1)}, y=${staircaseRoom.y.toFixed(1)}, width=${staircaseRoom.width}, height=${staircaseRoom.height} (same position on every floor, since it's one continuous stairwell). Do not place any other room on top of it.`
     : "This is a single-storey home — no staircase is needed.";
 
-  const prompt = `You are a senior residential architect designing a home for EnNaksha, a home design company in India. Analyze the brief below and produce an efficient, livable layout optimizing for natural light, cross-ventilation, privacy between public and private zones, and (if requested) Vastu guidance.
+  const prompt = `You are a senior residential architect designing a home for EnNaksha, a home design company in India, working from real residential design conventions actually used by Indian architects — not an idealized abstract layout. Analyze the brief below and produce an efficient, livable layout optimizing for natural light, cross-ventilation, privacy between public and private zones, and (if requested) Vastu guidance.
 
 Client brief:
 - Building footprint available for construction: ${footprint.width.toFixed(1)} ft (width) x ${footprint.height.toFixed(1)} ft (depth). Origin (0,0) is the top-left corner of this footprint, x increases right, y increases downward, all measurements in feet. Do not place anything outside this envelope.
@@ -286,6 +288,13 @@ Client brief:
 - ${staircaseNote}
 
 Distribute rooms sensibly across floors: put shared/public rooms (foyer, living/family room, dining, kitchen, one guest bedroom, powder room, utility) on the ground floor along with parking/garage access; put most bedrooms with attached bathrooms on upper floors for privacy; place special rooms wherever they best fit (e.g. home office/study on a quieter floor, pooja room per Vastu guidance if requested, terrace on the top floor).
+
+Follow these real-world architectural rules on every floor, the same way a licensed architect would:
+- The foyer (ground floor) must touch the floor's exterior boundary and open into the living/family room — never directly into a bedroom or bathroom.
+- Every bedroom, the living/family room, kitchen, and dining area on a given floor MUST have at least one full side flush against that floor's exterior boundary (x=0, x=${footprint.width.toFixed(1)}, y=0, or y=${footprint.height.toFixed(1)}) so it can have a real window. A habitable room sealed on all sides with no exterior wall is not a valid design.
+- A balcony or terrace is an open-air space attached to an exterior wall — it is physically impossible for one to sit in the interior of a floor with no exterior edge. Always place it flush against one full side of that floor's outer boundary, directly adjacent to the room it serves.
+- Bathrooms may be interior (windowless, exhaust-fan ventilated) — that's normal — but cluster them near each other and stack them above/below the same spot on other floors where possible, since it keeps plumbing runs short and realistic.
+- Avoid long thin unusable sliver rooms — bedrooms and living/family rooms should be at least 8 ft in their narrowest dimension, bathrooms at least 4.5 ft.
 
 The Master Bedroom always gets its own private attached bathroom — this is mandatory. Include exactly one room named "Master Bedroom" (type "master_bedroom"), and place a bathroom sharing a wall ONLY with that master bedroom (never also touching a hallway, another bedroom, or shared circulation space), named exactly "Attached Bathroom". Every other bedroom should ideally also get its own attached bathroom named "Attached Bathroom" (again sharing a wall only with that one bedroom) if the bathroom count allows; otherwise remaining bedrooms share a common bathroom.
 
@@ -305,10 +314,58 @@ Respond with ONLY strict JSON, no markdown fences, no commentary, matching exact
 }
 There must be exactly ${input.floors} entries in "floors", with "level" 0 to ${input.floors - 1}.`;
 
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: prompt }];
+  let parsed = await requestPlanCompletion(client, messages, input.floors);
+
+  const violationsByFloor = parsed.floors
+    .map((f) => ({
+      level: f.level,
+      violations: findVentilationViolations(f.rooms, footprint.width, footprint.height),
+    }))
+    .filter((f) => f.violations.length > 0);
+
+  if (violationsByFloor.length > 0) {
+    const description = violationsByFloor
+      .map((f) => `Floor ${f.level}: ${f.violations.map((v) => `"${v.name}"`).join(", ")}`)
+      .join("; ");
+
+    messages.push({ role: "assistant", content: JSON.stringify(parsed) });
+    messages.push({
+      role: "user",
+      content: `This plan is invalid: the following rooms are not touching any exterior wall of their floor (x=0, x=${footprint.width.toFixed(
+        1
+      )}, y=0, or y=${footprint.height.toFixed(
+        1
+      )}), but a room of that type must have a real window/be open to the outside — a balcony or terrace in particular cannot be landlocked in the interior. ${description}. Fix ONLY the position/size of the affected room(s) on each listed floor so each has a full side flush against an exterior boundary, keeping every other room unchanged and still non-overlapping. Respond with ONLY the corrected strict JSON, same schema as before, no commentary.`,
+    });
+
+    try {
+      const corrected = await requestPlanCompletion(client, messages, input.floors);
+      const correctedViolations = corrected.floors.reduce(
+        (sum, f) => sum + findVentilationViolations(f.rooms, footprint.width, footprint.height).length,
+        0
+      );
+      const originalViolations = violationsByFloor.reduce((sum, f) => sum + f.violations.length, 0);
+      if (correctedViolations < originalViolations) {
+        parsed = corrected;
+      }
+    } catch {
+      // keep the original plan if the correction pass fails
+    }
+  }
+
+  return parsed;
+}
+
+async function requestPlanCompletion(
+  client: Anthropic,
+  messages: Anthropic.MessageParam[],
+  expectedFloors: number
+): Promise<{ floors: { level: number; rooms: Room[] }[]; vastuNotes?: string; designNotes?: string; title?: string }> {
   const message = await client.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: 8000,
-    messages: [{ role: "user", content: prompt }],
+    messages,
   });
 
   const textBlock = message.content.find((b) => b.type === "text");
@@ -325,8 +382,11 @@ There must be exactly ${input.floors} entries in "floors", with "level" 0 to ${i
   if (!parsed.floors || !Array.isArray(parsed.floors) || parsed.floors.length === 0) {
     throw new Error("Claude returned a plan with no floors");
   }
+  if (parsed.floors.length !== expectedFloors) {
+    throw new Error(`Claude returned ${parsed.floors.length} floors instead of the requested ${expectedFloors}`);
+  }
 
-  return parsed as { floors: { level: number; rooms: Room[] }[]; vastuNotes?: string; designNotes?: string; title?: string };
+  return parsed;
 }
 
 function buildAreaSchedule(floors: FloorData[]): {

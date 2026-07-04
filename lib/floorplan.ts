@@ -138,6 +138,53 @@ export type WindowSpec = {
   room?: string;
 };
 
+/**
+ * Room types that are habitable/occupied spaces and, in a real home, need
+ * their own exterior wall for a window (natural light + ventilation).
+ * Bathrooms/utility/store/staircase/lift/garage are deliberately excluded —
+ * interior bathrooms with an exhaust fan are completely normal in Indian
+ * homes, so we don't flag those.
+ */
+const NEEDS_EXTERIOR_WALL: RoomCategory[] = [
+  "bedroom",
+  "master_bedroom",
+  "living",
+  "family",
+  "kitchen",
+  "dining",
+  "balcony",
+  "terrace",
+  "study",
+  "office",
+  "gym",
+  "theater",
+  "pooja",
+  "servant",
+];
+
+export function isOnExteriorBoundary(room: Room, totalWidth: number, totalHeight: number, tol = ADJACENCY_TOL): boolean {
+  return (
+    room.x < tol ||
+    Math.abs(room.x + room.width - totalWidth) < tol ||
+    room.y < tol ||
+    Math.abs(room.y + room.height - totalHeight) < tol
+  );
+}
+
+/**
+ * Finds rooms that Claude placed fully inside the envelope with no exterior
+ * wall, even though their type requires one (most importantly balconies/
+ * terraces, which are physically impossible landlocked in the middle of a
+ * floor plan — they have to open to the outside).
+ */
+export function findVentilationViolations(rooms: Room[], totalWidth: number, totalHeight: number): Room[] {
+  return rooms.filter((r) => {
+    const cat = categoryOf(r);
+    if (!NEEDS_EXTERIOR_WALL.includes(cat)) return false;
+    return !isOnExteriorBoundary(r, totalWidth, totalHeight);
+  });
+}
+
 const ENSUITE_NAME_RE = /attach|ensuite|en-suite|en suite|master.*(bath|wash|toilet)/i;
 
 /** A private/ensuite bathroom should only ever connect to the one bedroom it belongs to. */
@@ -301,7 +348,7 @@ export async function generateFloorPlan(
   const { width, height } = planDimensions(homeSize);
   const client = getClaudeClient();
 
-  const prompt = `You are an architectural planner for EnNaksha, a home design company in India.
+  const prompt = `You are an architectural planner for EnNaksha, a home design company in India, working from real residential design conventions used by Indian architects — not an idealized abstract layout.
 
 Design a 2D floor plan layout for this client:
 - BHK type: ${input.bhkType || "not specified"}
@@ -313,7 +360,15 @@ Design a 2D floor plan layout for this client:
 
 The plot envelope is exactly ${width} ft (width) x ${height} ft (height). Origin (0,0) is the top-left corner, x increases to the right, y increases downward. All measurements are in feet.
 
-Place every room required for the given BHK type (bedrooms, hall/living room, kitchen, bathrooms, dining area, foyer/entrance, balcony and utility area if space allows) as non-overlapping rectangles that together fill the envelope reasonably (small gaps for walls are fine, but do not let rooms overlap or extend outside the envelope). Include exactly one foyer/entrance room touching the outer boundary — that is where the main entrance door will be drawn. Room sizes should be realistic for Indian homes of this size and reflect the requested aesthetic in the "notes" field.
+Place every room required for the given BHK type (bedrooms, hall/living room, kitchen, bathrooms, dining area, foyer/entrance, balcony and utility area if space allows) as non-overlapping rectangles that together fill the envelope reasonably (small gaps for walls are fine, but do not let rooms overlap or extend outside the envelope). Room sizes should be realistic for Indian homes of this size and reflect the requested aesthetic in the "notes" field.
+
+Follow these real-world architectural rules, the same way a licensed architect would:
+- The foyer/entrance MUST touch the outer boundary (that's where the main entrance door is drawn), and must open into the living/hall — never directly into a bedroom or bathroom.
+- Every bedroom, the living/hall, the kitchen, and the dining area MUST have at least one full side flush against the building's outer boundary (x=0, x=${width}, y=0, or y=${height}) so it can have a real window — a habitable room sealed on all four sides with no exterior wall is not a valid design.
+- A balcony (if included) is an open-air space attached to an exterior wall — it is physically impossible for a balcony to sit in the interior of the plan with no exterior edge. Always place it flush against one full side of the outer boundary, directly adjacent to the room it serves (bedroom or living room).
+- Bathrooms may be interior (windowless, exhaust-fan ventilated) — that's normal — but keep them clustered near each other and near the kitchen where possible, since it keeps plumbing runs short and realistic.
+- Keep bedrooms toward the quieter/rear part of the plot, away from the entrance, for privacy; keep the living/dining/kitchen as the more public zone nearer the entrance.
+- Avoid long thin unusable sliver rooms — bedrooms and the living room should be at least 8 ft in their narrowest dimension, bathrooms at least 4.5 ft.
 
 If the home has 2 or more bedrooms, designate exactly one as the Master Bedroom (name it "Master Bedroom", type "master_bedroom") and give it its own private attached bathroom: a bathroom room sharing a wall ONLY with the master bedroom (not with any other bedroom, hallway, or shared circulation space), named exactly "Attached Bathroom" so it reads as a private ensuite rather than a shared/common bathroom. Any remaining bathrooms serve the other bedrooms as usual.
 
@@ -328,10 +383,42 @@ Respond with ONLY strict JSON, no markdown fences, no commentary, matching exact
   "notes": string
 }`;
 
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: prompt }];
+  let layout = await requestFloorPlanCompletion(client, messages, input, width, height);
+
+  const violations = findVentilationViolations(layout.rooms, layout.totalWidth, layout.totalHeight);
+  if (violations.length > 0) {
+    messages.push({ role: "assistant", content: JSON.stringify(layout) });
+    messages.push({
+      role: "user",
+      content: `This layout is invalid: ${violations
+        .map((v) => `"${v.name}"`)
+        .join(", ")} ${violations.length > 1 ? "are" : "is"} not touching any exterior wall (x=0, x=${width}, y=0, or y=${height}), but a room of that type must have a real window/be open to the outside — a balcony in particular cannot be landlocked in the interior. Fix ONLY the position/size of the affected room(s) so each has a full side flush against an exterior boundary, keeping every other room unchanged and still non-overlapping. Respond with ONLY the corrected strict JSON, same schema as before, no commentary.`,
+    });
+    try {
+      const corrected = await requestFloorPlanCompletion(client, messages, input, width, height);
+      if (findVentilationViolations(corrected.rooms, corrected.totalWidth, corrected.totalHeight).length < violations.length) {
+        layout = corrected;
+      }
+    } catch {
+      // keep the original layout if the correction pass fails
+    }
+  }
+
+  return layout;
+}
+
+async function requestFloorPlanCompletion(
+  client: Anthropic,
+  messages: Anthropic.MessageParam[],
+  input: FloorPlanInput,
+  width: number,
+  height: number
+): Promise<FloorPlanLayout> {
   const message = await client.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: 2000,
-    messages: [{ role: "user", content: prompt }],
+    messages,
   });
 
   const textBlock = message.content.find((block) => block.type === "text");
