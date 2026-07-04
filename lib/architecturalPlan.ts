@@ -9,6 +9,7 @@ import {
   findVentilationViolations,
   computeSpaceUtilization,
   MIN_SPACE_UTILIZATION,
+  describeLayoutStrategy,
   hasClaudeCredentials,
   type Room,
   type FloorPlanLayout,
@@ -277,6 +278,7 @@ async function requestRoomLayout(
 
 Client brief:
 - Building footprint available for construction: ${footprint.width.toFixed(1)} ft (width) x ${footprint.height.toFixed(1)} ft (depth). Origin (0,0) is the top-left corner of this footprint, x increases right, y increases downward, all measurements in feet. Do not place anything outside this envelope.
+- ${describeLayoutStrategy(footprint.width, footprint.height)}
 - Number of floors: ${input.floors} (${FLOOR_LABELS.slice(0, input.floors).join(", ")})
 - Bedrooms required (total across all floors): ${input.bedrooms}
 - Bathrooms required (total across all floors): ${input.bathrooms}

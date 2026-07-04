@@ -62,6 +62,33 @@ export function planDimensions(homeSizeSqFt: number) {
   return { width: Math.max(width, 10), height: Math.max(height, 10) };
 }
 
+/**
+ * Real floor plans aren't one-size-fits-all — a narrow, deep plot needs a
+ * different room-arrangement strategy than a near-square one. Picks the
+ * right typology (linear / L-shaped-clustered / hybrid) based on how
+ * elongated the envelope is, so Claude isn't guessing at a layout pattern
+ * that doesn't suit the plot's actual proportions.
+ */
+export function describeLayoutStrategy(width: number, height: number): string {
+  const long = Math.max(width, height);
+  const short = Math.min(width, height);
+  const ratio = long / short;
+
+  if (ratio >= 1.6) {
+    return `This plot is narrow and long (long side is ~${ratio.toFixed(
+      1
+    )}x the short side) — use a LINEAR layout strategy: arrange rooms in a front-to-back sequence along the long axis (foyer, then the open living/dining zone, then kitchen/utility, then bedrooms toward the rear), each room spanning close to the full short dimension so every room still reaches an exterior wall on one of the long sides. Don't place a staircase or any room in a dead-center block with no exterior wall — that breaks circulation and blocks light on a narrow plan.`;
+  }
+  if (ratio <= 1.25) {
+    return `This plot is close to square (roughly ${ratio.toFixed(
+      1
+    )}:1) — use an L-SHAPED/CLUSTERED layout strategy: cluster the public zone (foyer, living, dining, kitchen) around two adjoining sides forming an L, freeing up the opposite corner(s) of the envelope for the private bedroom zone.`;
+  }
+  return `This plot is moderately rectangular (roughly ${ratio.toFixed(
+    1
+  )}:1) — a hybrid layout works well: run the public zone along one full side, the private bedroom zone along the opposite side, with the kitchen/service zone at one end connecting them.`;
+}
+
 export function extractJson(text: string): string {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fenced) return fenced[1].trim();
@@ -392,6 +419,8 @@ Design a 2D floor plan layout for this client:
 - Location: ${input.location || "not specified"}
 
 The plot envelope is exactly ${width} ft (width) x ${height} ft (height). Origin (0,0) is the top-left corner, x increases to the right, y increases downward. All measurements are in feet.
+
+${describeLayoutStrategy(width, height)}
 
 Place every room required for the given BHK type (bedrooms, hall/living room, kitchen, bathrooms, dining area, foyer/entrance, balcony and utility area if space allows) as non-overlapping rectangles that together fill the envelope reasonably (small gaps for walls are fine, but do not let rooms overlap or extend outside the envelope). Room sizes should be realistic for Indian homes of this size and reflect the requested aesthetic in the "notes" field.
 
