@@ -287,6 +287,8 @@ Client brief:
 
 Distribute rooms sensibly across floors: put shared/public rooms (foyer, living/family room, dining, kitchen, one guest bedroom, powder room, utility) on the ground floor along with parking/garage access; put most bedrooms with attached bathrooms on upper floors for privacy; place special rooms wherever they best fit (e.g. home office/study on a quieter floor, pooja room per Vastu guidance if requested, terrace on the top floor).
 
+The Master Bedroom always gets its own private attached bathroom — this is mandatory. Include exactly one room named "Master Bedroom" (type "master_bedroom"), and place a bathroom sharing a wall ONLY with that master bedroom (never also touching a hallway, another bedroom, or shared circulation space), named exactly "Attached Bathroom". Every other bedroom should ideally also get its own attached bathroom named "Attached Bathroom" (again sharing a wall only with that one bedroom) if the bathroom count allows; otherwise remaining bedrooms share a common bathroom.
+
 Every room needs a "type" set to exactly one of: "bedroom", "master_bedroom", "living", "family", "kitchen", "bathroom", "powder", "dining", "foyer", "balcony", "terrace", "utility", "pantry", "pooja", "office", "study", "theater", "gym", "servant", "store", "staircase", "lift", "garage", "other".
 
 Respond with ONLY strict JSON, no markdown fences, no commentary, matching exactly this schema:

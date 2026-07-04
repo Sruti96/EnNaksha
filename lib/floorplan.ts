@@ -137,15 +137,79 @@ export type WindowSpec = {
   room?: string;
 };
 
+const ENSUITE_NAME_RE = /attach|ensuite|en-suite|en suite|master.*(bath|wash|toilet)/i;
+
+/** A private/ensuite bathroom should only ever connect to the one bedroom it belongs to. */
+export function isEnsuiteBathroom(room: Room): boolean {
+  const cat = categoryOf(room);
+  return (cat === "bathroom" || cat === "powder") && ENSUITE_NAME_RE.test(room.name);
+}
+
+function sharedWallLength(a: Room, b: Room): number {
+  if (Math.abs(a.x + a.width - b.x) < ADJACENCY_TOL || Math.abs(b.x + b.width - a.x) < ADJACENCY_TOL) {
+    const overlapStart = Math.max(a.y, b.y);
+    const overlapEnd = Math.min(a.y + a.height, b.y + b.height);
+    return Math.max(0, overlapEnd - overlapStart);
+  }
+  if (Math.abs(a.y + a.height - b.y) < ADJACENCY_TOL || Math.abs(b.y + b.height - a.y) < ADJACENCY_TOL) {
+    const overlapStart = Math.max(a.x, b.x);
+    const overlapEnd = Math.min(a.x + a.width, b.x + b.width);
+    return Math.max(0, overlapEnd - overlapStart);
+  }
+  return 0;
+}
+
 export function findDoors(rooms: Room[], totalWidth: number, totalHeight: number): DoorSpec[] {
   const doors: DoorSpec[] = [];
   const doorLen = DOOR_LENGTH_FT;
+
+  // Ensuite/attached bathrooms only get a door to the one bedroom they serve —
+  // never to a hallway or another bedroom they happen to also touch — so they
+  // read as genuinely private rather than a shared/common bathroom.
+  const ensuiteToBedroom = new Map<Room, Room>();
+  for (const room of rooms) {
+    if (!isEnsuiteBathroom(room)) continue;
+    let bestBedroom: Room | null = null;
+    let bestOverlap = 0;
+    for (const other of rooms) {
+      if (other === room) continue;
+      const cat = categoryOf(other);
+      if (cat !== "bedroom" && cat !== "master_bedroom") continue;
+      const overlap = sharedWallLength(room, other);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestBedroom = other;
+      }
+    }
+    if (bestBedroom && bestOverlap >= doorLen) {
+      ensuiteToBedroom.set(room, bestBedroom);
+    }
+  }
+
+  for (const [ensuite, bedroom] of ensuiteToBedroom) {
+    if (Math.abs(ensuite.x + ensuite.width - bedroom.x) < ADJACENCY_TOL || Math.abs(bedroom.x + bedroom.width - ensuite.x) < ADJACENCY_TOL) {
+      const wallX = Math.abs(ensuite.x + ensuite.width - bedroom.x) < ADJACENCY_TOL ? ensuite.x + ensuite.width : bedroom.x + bedroom.width;
+      const overlapStart = Math.max(ensuite.y, bedroom.y);
+      const overlapEnd = Math.min(ensuite.y + ensuite.height, bedroom.y + bedroom.height);
+      const midY = (overlapStart + overlapEnd) / 2;
+      doors.push({ x: wallX, y: midY - doorLen / 2, orientation: "v", len: doorLen, swing: 1, roomA: bedroom.name, roomB: ensuite.name });
+    } else {
+      const wallY = Math.abs(ensuite.y + ensuite.height - bedroom.y) < ADJACENCY_TOL ? ensuite.y + ensuite.height : bedroom.y + bedroom.height;
+      const overlapStart = Math.max(ensuite.x, bedroom.x);
+      const overlapEnd = Math.min(ensuite.x + ensuite.width, bedroom.x + bedroom.width);
+      const midX = (overlapStart + overlapEnd) / 2;
+      doors.push({ x: midX - doorLen / 2, y: wallY, orientation: "h", len: doorLen, swing: 1, roomA: bedroom.name, roomB: ensuite.name });
+    }
+  }
+
+  const handledEnsuites = new Set(ensuiteToBedroom.keys());
 
   for (let i = 0; i < rooms.length; i++) {
     for (let j = i + 1; j < rooms.length; j++) {
       const a = rooms[i];
       const b = rooms[j];
       if (categoryOf(a) === "staircase" || categoryOf(b) === "staircase") continue;
+      if (handledEnsuites.has(a) || handledEnsuites.has(b)) continue;
 
       if (Math.abs(a.x + a.width - b.x) < ADJACENCY_TOL || Math.abs(b.x + b.width - a.x) < ADJACENCY_TOL) {
         const wallX = Math.abs(a.x + a.width - b.x) < ADJACENCY_TOL ? a.x + a.width : b.x + b.width;
@@ -235,7 +299,9 @@ The plot envelope is exactly ${width} ft (width) x ${height} ft (height). Origin
 
 Place every room required for the given BHK type (bedrooms, hall/living room, kitchen, bathrooms, dining area, foyer/entrance, balcony and utility area if space allows) as non-overlapping rectangles that together fill the envelope reasonably (small gaps for walls are fine, but do not let rooms overlap or extend outside the envelope). Include exactly one foyer/entrance room touching the outer boundary — that is where the main entrance door will be drawn. Room sizes should be realistic for Indian homes of this size and reflect the requested aesthetic in the "notes" field.
 
-Every room must have a "type" set to exactly one of: "bedroom", "living", "kitchen", "bathroom", "dining", "foyer", "balcony", "utility", "other" — this controls which furniture icons get drawn, so pick the closest match even if the room name is more specific (e.g. "Master Bedroom" -> type "bedroom").
+If the home has 2 or more bedrooms, designate exactly one as the Master Bedroom (name it "Master Bedroom", type "master_bedroom") and give it its own private attached bathroom: a bathroom room sharing a wall ONLY with the master bedroom (not with any other bedroom, hallway, or shared circulation space), named exactly "Attached Bathroom" so it reads as a private ensuite rather than a shared/common bathroom. Any remaining bathrooms serve the other bedrooms as usual.
+
+Every room must have a "type" set to exactly one of: "bedroom", "master_bedroom", "living", "kitchen", "bathroom", "dining", "foyer", "balcony", "utility", "other" — this controls which furniture icons get drawn, so pick the closest match even if the room name is more specific.
 
 Respond with ONLY strict JSON, no markdown fences, no commentary, matching exactly this schema:
 {
