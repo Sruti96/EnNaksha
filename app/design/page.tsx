@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Button from "@/components/ui/Button";
-import FloorPlanSVG from "@/components/ui/FloorPlanSVG";
+import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
+import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import type { FloorPlanLayout } from "@/lib/floorplan";
 
 export default function DesignLookupPage() {
@@ -10,6 +11,7 @@ export default function DesignLookupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [layout, setLayout] = useState<FloorPlanLayout | null>(null);
+  const [planStyle, setPlanStyle] = useState<PlanStyle>("warm");
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +74,10 @@ export default function DesignLookupPage() {
 
         {layout && (
           <div className="mt-8">
-            <FloorPlanSVG layout={layout} />
+            <div className="flex justify-center mb-3">
+              <PlanStyleToggle style={planStyle} onChange={setPlanStyle} />
+            </div>
+            <FloorPlanSVG layout={layout} style={planStyle} />
           </div>
         )}
       </div>

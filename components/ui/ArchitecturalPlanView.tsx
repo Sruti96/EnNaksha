@@ -1,17 +1,58 @@
 "use client";
 
-import FloorPlanSVG from "@/components/ui/FloorPlanSVG";
+import { useState } from "react";
+import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
+import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import type { ArchitecturalPlan } from "@/lib/architecturalPlan";
 
 const SITE_SCALE = 10; // px per foot — smaller than the floor-plan scale since plots are larger
 const SITE_PAD = 50;
 
+const SITE_THEMES: Record<
+  PlanStyle,
+  {
+    bg: string;
+    plotFill: string;
+    ink: string;
+    line: string;
+    roadLine: string;
+    footprintFill: string;
+    drivewayFill: string;
+    parkingFill: string;
+    entryFill: string;
+  }
+> = {
+  warm: {
+    bg: "#FBF6EE",
+    plotFill: "#eef2ea",
+    ink: "#3a2a1a",
+    line: "#7C4A1E",
+    roadLine: "#8a8478",
+    footprintFill: "#fff",
+    drivewayFill: "#ddd6c8",
+    parkingFill: "#e8e2d4",
+    entryFill: "#B5651D",
+  },
+  blueprint: {
+    bg: "#F2F7FB",
+    plotFill: "#ffffff",
+    ink: "#0f2438",
+    line: "#0f2438",
+    roadLine: "#7691a8",
+    footprintFill: "#ffffff",
+    drivewayFill: "#eaf1f7",
+    parkingFill: "#eaf1f7",
+    entryFill: "#0f2438",
+  },
+};
+
 function siteToPx(ft: number) {
   return ft * SITE_SCALE;
 }
 
-function SitePlanSVG({ plan }: { plan: ArchitecturalPlan }) {
+function SitePlanSVG({ plan, style }: { plan: ArchitecturalPlan; style: PlanStyle }) {
   const { sitePlan } = plan;
+  const theme = SITE_THEMES[style];
   const canvasWidth = SITE_PAD * 2 + siteToPx(sitePlan.plotWidth);
   const canvasHeight = SITE_PAD * 2 + siteToPx(sitePlan.plotDepth);
   const X = (ft: number) => SITE_PAD + siteToPx(ft);
@@ -37,31 +78,41 @@ function SitePlanSVG({ plan }: { plan: ArchitecturalPlan }) {
       labelOffset = { x: 0, y: 20 };
   }
 
+  const gridId = "siteplan-grid";
+
   return (
     <div className="w-full bg-cream rounded-xl border border-sand p-4">
       <h4 className="font-playfair text-base font-bold text-charcoal mb-2">Site Plan</h4>
       <div className="w-full overflow-auto">
         <svg viewBox={`0 0 ${canvasWidth} ${canvasHeight}`} width="100%" style={{ maxHeight: 480 }}>
-          <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill="#FBF6EE" />
+          {style === "blueprint" && (
+            <defs>
+              <pattern id={gridId} width={SITE_SCALE} height={SITE_SCALE} patternUnits="userSpaceOnUse">
+                <path d={`M ${SITE_SCALE} 0 L 0 0 0 ${SITE_SCALE}`} fill="none" stroke="#c7d9e8" strokeWidth={0.5} />
+              </pattern>
+            </defs>
+          )}
+          <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={style === "blueprint" ? `url(#${gridId})` : theme.bg} />
+          {style === "blueprint" && <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={theme.bg} opacity={0.35} />}
 
           <rect
             x={X(0)}
             y={Y(0)}
             width={siteToPx(sitePlan.plotWidth)}
             height={siteToPx(sitePlan.plotDepth)}
-            fill="#eef2ea"
-            stroke="#3a2a1a"
+            fill={theme.plotFill}
+            stroke={theme.ink}
             strokeWidth={2}
           />
 
-          <line x1={roadEdge.x1} y1={roadEdge.y1} x2={roadEdge.x2} y2={roadEdge.y2} stroke="#8a8478" strokeWidth={10} strokeDasharray="2,6" />
+          <line x1={roadEdge.x1} y1={roadEdge.y1} x2={roadEdge.x2} y2={roadEdge.y2} stroke={theme.roadLine} strokeWidth={10} strokeDasharray="2,6" />
           <text
             x={(roadEdge.x1 + roadEdge.x2) / 2 + labelOffset.x}
             y={(roadEdge.y1 + roadEdge.y2) / 2 + labelOffset.y}
             textAnchor="middle"
             fontFamily="Inter, sans-serif"
             fontSize={10}
-            fill="#5c4632"
+            fill={theme.ink}
           >
             Road ({sitePlan.roadWidth}&apos; wide)
           </text>
@@ -71,12 +122,12 @@ function SitePlanSVG({ plan }: { plan: ArchitecturalPlan }) {
             y={Y(sitePlan.footprint.y)}
             width={siteToPx(sitePlan.footprint.width)}
             height={siteToPx(sitePlan.footprint.height)}
-            fill="#fff"
-            stroke="#7C4A1E"
+            fill={theme.footprintFill}
+            stroke={theme.line}
             strokeWidth={1.5}
             strokeDasharray="6,3"
           />
-          <text x={X(sitePlan.footprint.x) + 6} y={Y(sitePlan.footprint.y) + 14} fontFamily="Inter, sans-serif" fontSize={10} fill="#7C4A1E">
+          <text x={X(sitePlan.footprint.x) + 6} y={Y(sitePlan.footprint.y) + 14} fontFamily="Inter, sans-serif" fontSize={10} fill={theme.line}>
             Building footprint
           </text>
 
@@ -85,8 +136,8 @@ function SitePlanSVG({ plan }: { plan: ArchitecturalPlan }) {
             y={Y(sitePlan.driveway.y)}
             width={siteToPx(sitePlan.driveway.width)}
             height={siteToPx(sitePlan.driveway.height)}
-            fill="#ddd6c8"
-            stroke="#8a8478"
+            fill={theme.drivewayFill}
+            stroke={theme.roadLine}
             strokeWidth={1}
           />
 
@@ -97,31 +148,31 @@ function SitePlanSVG({ plan }: { plan: ArchitecturalPlan }) {
                 y={Y(sitePlan.parking.y)}
                 width={siteToPx(sitePlan.parking.width)}
                 height={siteToPx(sitePlan.parking.height)}
-                fill="#e8e2d4"
-                stroke="#8a5a2b"
+                fill={theme.parkingFill}
+                stroke={theme.line}
                 strokeWidth={1}
                 strokeDasharray="3,2"
               />
-              <text x={X(sitePlan.parking.x) + 4} y={Y(sitePlan.parking.y) + 12} fontFamily="Inter, sans-serif" fontSize={9} fill="#8a5a2b">
+              <text x={X(sitePlan.parking.x) + 4} y={Y(sitePlan.parking.y) + 12} fontFamily="Inter, sans-serif" fontSize={9} fill={theme.line}>
                 Parking x{sitePlan.parking.capacity}
               </text>
             </g>
           )}
 
-          <circle cx={X(sitePlan.entrance.x)} cy={Y(sitePlan.entrance.y)} r={5} fill="#B5651D" />
-          <text x={X(sitePlan.entrance.x) + 8} y={Y(sitePlan.entrance.y) + 4} fontFamily="Inter, sans-serif" fontSize={9} fill="#2E1B0E">
+          <circle cx={X(sitePlan.entrance.x)} cy={Y(sitePlan.entrance.y)} r={5} fill={theme.entryFill} />
+          <text x={X(sitePlan.entrance.x) + 8} y={Y(sitePlan.entrance.y) + 4} fontFamily="Inter, sans-serif" fontSize={9} fill={theme.ink}>
             Entry
           </text>
 
           <g transform={`translate(${canvasWidth - 50}, 20)`}>
-            <circle cx={15} cy={15} r={15} fill="#fff" stroke="#7C4A1E" strokeWidth={1} />
-            <path d="M 15 4 L 20 18 L 15 14 L 10 18 Z" fill="#7C4A1E" />
-            <text x={15} y={34} textAnchor="middle" fontFamily="Inter, sans-serif" fontSize={9} fontWeight={700} fill="#3a2a1a">
+            <circle cx={15} cy={15} r={15} fill="#fff" stroke={theme.line} strokeWidth={1} />
+            <path d="M 15 4 L 20 18 L 15 14 L 10 18 Z" fill={theme.line} />
+            <text x={15} y={34} textAnchor="middle" fontFamily="Inter, sans-serif" fontSize={9} fontWeight={700} fill={theme.ink}>
               N
             </text>
           </g>
 
-          <text x={(X(0) + X(sitePlan.plotWidth)) / 2} y={Y(0) - 10} textAnchor="middle" fontFamily="Inter, sans-serif" fontSize={10} fill="#7C4A1E">
+          <text x={(X(0) + X(sitePlan.plotWidth)) / 2} y={Y(0) - 10} textAnchor="middle" fontFamily="Inter, sans-serif" fontSize={10} fill={theme.line}>
             {sitePlan.plotWidth}&apos;
           </text>
           <text
@@ -130,7 +181,7 @@ function SitePlanSVG({ plan }: { plan: ArchitecturalPlan }) {
             textAnchor="middle"
             fontFamily="Inter, sans-serif"
             fontSize={10}
-            fill="#7C4A1E"
+            fill={theme.line}
             transform={`rotate(-90 ${X(0) - 12} ${(Y(0) + Y(sitePlan.plotDepth)) / 2})`}
           >
             {sitePlan.plotDepth}&apos;
@@ -184,6 +235,8 @@ function ScheduleTable<T extends Record<string, unknown>>({
 }
 
 export default function ArchitecturalPlanView({ plan }: { plan: ArchitecturalPlan }) {
+  const [style, setStyle] = useState<PlanStyle>("warm");
+
   return (
     <div className="flex flex-col gap-6">
       <div className="bg-ivory border border-sand rounded-xl p-5 flex flex-wrap justify-between gap-4">
@@ -206,10 +259,21 @@ export default function ArchitecturalPlanView({ plan }: { plan: ArchitecturalPla
         </p>
       </div>
 
-      <SitePlanSVG plan={plan} />
+      <div className="flex justify-center">
+        <PlanStyleToggle style={style} onChange={setStyle} />
+      </div>
+
+      <SitePlanSVG plan={plan} style={style} />
 
       {plan.floors.map((floor) => (
-        <FloorPlanSVG key={floor.level} layout={floor.layout} columns={floor.columns} beams={floor.beams} utilities={floor.utilities} />
+        <FloorPlanSVG
+          key={floor.level}
+          layout={floor.layout}
+          columns={floor.columns}
+          beams={floor.beams}
+          utilities={floor.utilities}
+          style={style}
+        />
       ))}
 
       {plan.vastuNotes && (

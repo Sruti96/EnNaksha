@@ -2,7 +2,8 @@
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { saveLeadFull } from "@/lib/leads";
-import FloorPlanSVG from "@/components/ui/FloorPlanSVG";
+import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
+import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import LocationAutocomplete from "@/components/ui/LocationAutocomplete";
 import type { FloorPlanLayout } from "@/lib/floorplan";
 
@@ -75,6 +76,7 @@ export default function LeadForm() {
   const [design, setDesign] = useState<FloorPlanLayout | null>(null);
   const [designLoading, setDesignLoading] = useState(false);
   const [designError, setDesignError] = useState("");
+  const [planStyle, setPlanStyle] = useState<PlanStyle>("warm");
 
   const progress = ((step + 1) / STEPS.length) * 100;
 
@@ -181,7 +183,10 @@ export default function LeadForm() {
                 <h3 className="font-playfair text-lg font-bold text-charcoal mb-3 text-center">
                   Your Instant 2D Layout Preview
                 </h3>
-                <FloorPlanSVG layout={design} />
+                <div className="flex justify-center mb-3">
+                  <PlanStyleToggle style={planStyle} onChange={setPlanStyle} />
+                </div>
+                <FloorPlanSVG layout={design} style={planStyle} />
                 <p className="font-inter text-[11px] text-muted/70 mt-2 text-center">
                   A draft only — our designers will refine this with you before finalizing.
                 </p>
