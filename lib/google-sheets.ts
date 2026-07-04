@@ -175,3 +175,48 @@ export async function saveLead(lead: Lead) {
 
   await appendViaAppsScript(lead);
 }
+
+/**
+ * Reads a lead back out of the sheet by email (most recent submission wins).
+ * Only works with the service-account credential path, since the Apps Script
+ * fallback is write-only.
+ */
+export async function getLeadByEmail(email: string): Promise<Lead | null> {
+  if (!hasGoogleSheetsCredentials()) {
+    throw new Error(
+      "Reading leads from the sheet requires Google Sheets service-account credentials"
+    );
+  }
+
+  const sheets = getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `Sheet1!A:${String.fromCharCode(64 + HEADERS.length)}`,
+  });
+
+  const rows = res.data.values || [];
+  const dataRows = rows.slice(1); // skip header row
+  const target = email.trim().toLowerCase();
+
+  const match = [...dataRows]
+    .reverse()
+    .find((row) => (row[2] || "").toLowerCase() === target);
+
+  if (!match) return null;
+
+  return {
+    location: match[1] || "",
+    email: match[2] || "",
+    plan: match[3] || "",
+    bhkType: match[4] || "",
+    homeSize: match[5] || "",
+    aesthetic: match[6] || "",
+    timeline: match[7] || "",
+    floorPlan: match[8] || "",
+    budget: match[9] || "",
+    fullName: match[10] || "",
+    whatsapp: match[11] || "",
+    addOns: match[12] || "",
+    step: match[13] || "",
+  };
+}

@@ -2,6 +2,8 @@
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { saveLeadFull } from "@/lib/leads";
+import FloorPlanSVG from "@/components/ui/FloorPlanSVG";
+import type { FloorPlanLayout } from "@/lib/floorplan";
 
 type FormData = {
   location: string;
@@ -69,6 +71,9 @@ export default function LeadForm() {
   const [dragging, setDragging] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("PMC Plan");
   const [addOns, setAddOns] = useState<string[]>([]);
+  const [design, setDesign] = useState<FloorPlanLayout | null>(null);
+  const [designLoading, setDesignLoading] = useState(false);
+  const [designError, setDesignError] = useState("");
 
   const progress = ((step + 1) / STEPS.length) * 100;
 
@@ -108,6 +113,35 @@ export default function LeadForm() {
       setSubmitting(false);
       setSubmitted(true);
     }
+
+    // Kick off the Claude-generated 2D design in the background using the
+    // same inputs the client just entered (mirrors what's saved to the sheet).
+    setDesignLoading(true);
+    setDesignError("");
+    try {
+      const res = await fetch("/api/design", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bhkType: data.bhkType,
+          homeSize: data.homeSize,
+          aesthetic: data.aesthetic,
+          plan: selectedPlan,
+          budget: data.budget,
+          location: data.location.trim(),
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setDesign(result.layout);
+      } else {
+        setDesignError(result.error || "Couldn't generate your design right now.");
+      }
+    } catch {
+      setDesignError("Couldn't generate your design right now.");
+    } finally {
+      setDesignLoading(false);
+    }
   };
 
   if (submitted) {
@@ -134,6 +168,30 @@ export default function LeadForm() {
               While you wait, explore our{" "}
               <a href="#gallery" className="text-warm-brown underline">recent projects →</a>
             </p>
+
+            {designLoading && (
+              <p className="font-inter text-sm text-muted mt-6 animate-pulse">
+                Generating your free 2D layout…
+              </p>
+            )}
+
+            {design && (
+              <div className="mt-8 text-left">
+                <h3 className="font-playfair text-lg font-bold text-charcoal mb-3 text-center">
+                  Your Instant 2D Layout Preview
+                </h3>
+                <FloorPlanSVG layout={design} />
+                <p className="font-inter text-[11px] text-muted/70 mt-2 text-center">
+                  A draft only — our designers will refine this with you before finalizing.
+                </p>
+              </div>
+            )}
+
+            {!designLoading && designError && (
+              <p className="font-inter text-xs text-muted/60 mt-6">
+                {designError}
+              </p>
+            )}
           </div>
         </div>
       </section>
