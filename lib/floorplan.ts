@@ -200,6 +200,23 @@ export function computeSpaceUtilization(rooms: Room[], totalWidth: number, total
   return roomArea / envelopeArea;
 }
 
+/**
+ * Real Indian floor plans almost never wall off the living room from the
+ * dining area — they're one continuous open-plan zone with a wide shared
+ * opening, not a swinging door. Any pair of categories listed here gets no
+ * door drawn between them at all (just the plain shared-wall line).
+ */
+const OPEN_PLAN_PAIRS: [RoomCategory, RoomCategory][] = [
+  ["living", "dining"],
+  ["family", "dining"],
+];
+
+function isOpenPlanPair(a: Room, b: Room): boolean {
+  const catA = categoryOf(a);
+  const catB = categoryOf(b);
+  return OPEN_PLAN_PAIRS.some(([x, y]) => (catA === x && catB === y) || (catA === y && catB === x));
+}
+
 const ENSUITE_NAME_RE = /attach|ensuite|en-suite|en suite|master.*(bath|wash|toilet)/i;
 
 /** A private/ensuite bathroom should only ever connect to the one bedroom it belongs to. */
@@ -273,6 +290,7 @@ export function findDoors(rooms: Room[], totalWidth: number, totalHeight: number
       const b = rooms[j];
       if (categoryOf(a) === "staircase" || categoryOf(b) === "staircase") continue;
       if (handledEnsuites.has(a) || handledEnsuites.has(b)) continue;
+      if (isOpenPlanPair(a, b)) continue;
 
       if (Math.abs(a.x + a.width - b.x) < ADJACENCY_TOL || Math.abs(b.x + b.width - a.x) < ADJACENCY_TOL) {
         const wallX = Math.abs(a.x + a.width - b.x) < ADJACENCY_TOL ? a.x + a.width : b.x + b.width;
@@ -387,12 +405,17 @@ Use these real, research-based Indian residential room size standards (aligned w
 
 Fill the envelope — do not leave unused/dead floor area. Rooms together should cover at least 90% of the total envelope area (the rest accounts for walls/circulation). If there's leftover space after placing the required rooms, enlarge the living room, kitchen, dining area, or bedrooms toward the ideal sizes above, or add a sensible extra room (store, utility nook, larger balcony) — never leave a gap that isn't part of any room.
 
-Follow these real-world architectural rules, the same way a licensed architect would:
+Plan the zoning the way an architect would — sketch the bubble diagram/adjacency matrix mentally before placing rectangles:
+- PUBLIC ZONE: foyer + living/hall + dining, clustered together nearest the entrance. Living and dining should be ONE continuous open-plan zone sharing a long common wall (at least 8 ft) with no door between them — real Indian homes almost never wall these off from each other, it should read as a single open L-shaped space.
+- SERVICE ZONE: kitchen sits directly adjacent to the dining area (short serving distance) but should NOT be directly adjacent to any bedroom — cooking noise/smell shouldn't bleed into a bedroom.
+- PRIVATE ZONE: bedrooms + their attached bathrooms are grouped together, away from the entrance and away from the kitchen, for quiet and privacy. Put the Master Bedroom in whichever corner of the envelope is farthest from the foyer/entrance — that's the most private position, the same way real 2/3 BHK plans put the master bedroom at the opposite end of the home from the front door.
 - The foyer/entrance MUST touch the outer boundary (that's where the main entrance door is drawn), and must open into the living/hall — never directly into a bedroom or bathroom.
+- Size the kitchen so a real kitchen work triangle fits: the fridge, stove, and sink should be able to sit 4-9 ft apart from each other (roughly 26 ft combined), so keep it compact and roughly proportioned (not a long thin sliver), and don't let it become a walkway other rooms have to pass through.
+
+Other physical requirements:
 - Every bedroom, the living/hall, the kitchen, and the dining area MUST have at least one full side flush against the building's outer boundary (x=0, x=${width}, y=0, or y=${height}) so it can have a real window — a habitable room sealed on all four sides with no exterior wall is not a valid design.
 - A balcony (if included) is an open-air space attached to an exterior wall — it is physically impossible for a balcony to sit in the interior of the plan with no exterior edge. Always place it flush against one full side of the outer boundary, directly adjacent to the room it serves (bedroom or living room).
 - Bathrooms may be interior (windowless, exhaust-fan ventilated) — that's normal — but keep them clustered near each other and near the kitchen where possible, since it keeps plumbing runs short and realistic.
-- Keep bedrooms toward the quieter/rear part of the plot, away from the entrance, for privacy; keep the living/dining/kitchen as the more public zone nearer the entrance.
 - Avoid long thin unusable sliver rooms — bedrooms and the living room should be at least 8 ft in their narrowest dimension, bathrooms at least 4.5 ft.
 
 If the home has 2 or more bedrooms, designate exactly one as the Master Bedroom (name it "Master Bedroom", type "master_bedroom") and give it its own private attached bathroom: a bathroom room sharing a wall ONLY with the master bedroom (not with any other bedroom, hallway, or shared circulation space), named exactly "Attached Bathroom" so it reads as a private ensuite rather than a shared/common bathroom. Any remaining bathrooms serve the other bedrooms as usual.

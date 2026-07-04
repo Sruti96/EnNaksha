@@ -301,7 +301,16 @@ Use these real, research-based Indian residential room size standards (aligned w
 
 Fill each floor's footprint — do not leave unused/dead floor area. Rooms on a given floor together should cover at least 90% of that floor's footprint area (the rest accounts for walls/circulation, and the staircase void if any). If there's leftover space, enlarge the living/family room, kitchen, dining area, or bedrooms toward the ideal sizes above, or add a sensible extra room — never leave a gap that isn't part of any room.
 
-Follow these real-world architectural rules on every floor, the same way a licensed architect would:
+Compass reference for this footprint: y=0 is North, y=${footprint.height.toFixed(1)} is South, x=0 is West, x=${footprint.width.toFixed(1)} is East.
+
+Plan the zoning the way an architect would — sketch the bubble diagram/adjacency matrix mentally before placing rectangles:
+- PUBLIC ZONE (ground floor): foyer + living/family room + dining, clustered together nearest the entrance. Living/family and dining should be ONE continuous open-plan zone sharing a long common wall (at least 8 ft) with no door between them — real Indian homes almost never wall these off from each other.
+- SERVICE ZONE: kitchen sits directly adjacent to the dining area (short serving distance) but should NOT be directly adjacent to any bedroom.
+- PRIVATE ZONE: bedrooms + their attached bathrooms are grouped together, away from the entrance and away from the kitchen. On whichever floor it sits, put the Master Bedroom in the corner farthest from the foyer/entrance — the most private position.
+- As a general Indian real-estate convention (independent of Vastu, just common practice), prefer the kitchen toward the south/east zone of the footprint and the master bedroom toward the south/west zone, when the layout and entrance position allow it without breaking the rules above. Treat this as a soft default; if Vastu guidance was explicitly requested, follow the stronger Vastu placements already noted instead.
+- Size the kitchen so a real kitchen work triangle fits: the fridge, stove, and sink should be able to sit 4-9 ft apart from each other (roughly 26 ft combined) — keep it compact and proportioned, not a long thin sliver, and don't let it become a walkway.
+
+Other physical requirements, on every floor:
 - The foyer (ground floor) must touch the floor's exterior boundary and open into the living/family room — never directly into a bedroom or bathroom.
 - Every bedroom, the living/family room, kitchen, and dining area on a given floor MUST have at least one full side flush against that floor's exterior boundary (x=0, x=${footprint.width.toFixed(1)}, y=0, or y=${footprint.height.toFixed(1)}) so it can have a real window. A habitable room sealed on all sides with no exterior wall is not a valid design.
 - A balcony or terrace is an open-air space attached to an exterior wall — it is physically impossible for one to sit in the interior of a floor with no exterior edge. Always place it flush against one full side of that floor's outer boundary, directly adjacent to the room it serves.
