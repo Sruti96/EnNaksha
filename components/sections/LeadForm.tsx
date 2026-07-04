@@ -3,6 +3,7 @@ import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { saveLeadFull } from "@/lib/leads";
 import FloorPlanSVG from "@/components/ui/FloorPlanSVG";
+import LocationAutocomplete from "@/components/ui/LocationAutocomplete";
 import type { FloorPlanLayout } from "@/lib/floorplan";
 
 type FormData = {
@@ -294,14 +295,16 @@ export default function LeadForm() {
                   <label className="block font-inter text-sm font-medium text-charcoal mb-1">
                     Where is your new dream home located?
                   </label>
-                  <input
-                    type="text"
+                  <LocationAutocomplete
                     placeholder="e.g., Prestige Lakeside, Sarjapur Road"
                     value={data.location}
-                    onChange={(e) => setData({ ...data, location: e.target.value })}
+                    onChange={(value) => setData({ ...data, location: value })}
                     className="w-full border border-sand rounded-lg px-4 py-3 font-inter text-sm focus:outline-none focus:border-warm-brown bg-cream"
                     required
                   />
+                  <p className="font-inter text-[11px] text-muted mt-1">
+                    Pick your apartment or project from the list if it appears — we&apos;ll check for its real layout.
+                  </p>
                 </div>
                 <div>
                   <label className="block font-inter text-sm font-medium text-charcoal mb-1">

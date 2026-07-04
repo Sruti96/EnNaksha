@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { extractProjectName, findProjectLayout } from "@/lib/projectLayouts";
 
 export type RoomCategory =
   | "bedroom"
@@ -281,6 +282,21 @@ export function findWindows(rooms: Room[], totalWidth: number, totalHeight: numb
 export async function generateFloorPlan(
   input: FloorPlanInput
 ): Promise<FloorPlanLayout> {
+  // A real, verified layout for the specific building the visitor picked
+  // beats an AI guess — check that first before generating anything.
+  if (input.location) {
+    const projectName = extractProjectName(input.location);
+    const known = findProjectLayout(projectName, input.bhkType);
+    if (known) {
+      return {
+        ...known,
+        notes: known.notes
+          ? `${known.notes} Based on ${projectName}'s actual verified unit layout.`
+          : `Based on ${projectName}'s actual verified unit layout.`,
+      };
+    }
+  }
+
   const homeSize = Number(input.homeSize) || 1000;
   const { width, height } = planDimensions(homeSize);
   const client = getClaudeClient();
