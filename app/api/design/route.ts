@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateFloorPlan, hasClaudeCredentials, type FloorPlanInput } from "@/lib/floorplan";
+import { generateFloorPlanArt } from "@/lib/floorplanArt";
 import { getLeadByEmail, hasGoogleSheetsCredentials } from "@/lib/google-sheets";
 
 export async function POST(request: Request) {
@@ -58,9 +59,29 @@ export async function POST(request: Request) {
     };
   }
 
+  // Try letting Claude draw the actual SVG artwork itself first (the same
+  // approach claude.ai's Design feature uses). It's validated internally
+  // against the same physical-correctness checks as the structured flow —
+  // if it fails those, or can't be parsed at all, this returns null and we
+  // fall back to the deterministic structured-JSON + FloorPlanSVG renderer.
+  try {
+    const art = await generateFloorPlanArt(input);
+    if (art) {
+      return NextResponse.json({
+        success: true,
+        mode: "art",
+        svg: art.svg,
+        title: art.title,
+        notes: art.notes,
+      });
+    }
+  } catch {
+    // fall through to the structured flow below
+  }
+
   try {
     const layout = await generateFloorPlan(input);
-    return NextResponse.json({ success: true, layout });
+    return NextResponse.json({ success: true, mode: "structured", layout });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate design";
     return NextResponse.json({ success: false, error: message }, { status: 502 });

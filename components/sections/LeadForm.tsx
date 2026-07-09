@@ -3,9 +3,14 @@ import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { saveLeadFull } from "@/lib/leads";
 import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
+import FloorPlanArt from "@/components/ui/FloorPlanArt";
 import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import LocationAutocomplete from "@/components/ui/LocationAutocomplete";
 import type { FloorPlanLayout } from "@/lib/floorplan";
+
+type DesignResult =
+  | { mode: "art"; svg: string; title?: string; notes?: string }
+  | { mode: "structured"; layout: FloorPlanLayout };
 
 type FormData = {
   location: string;
@@ -73,7 +78,7 @@ export default function LeadForm() {
   const [dragging, setDragging] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("PMC Plan");
   const [addOns, setAddOns] = useState<string[]>([]);
-  const [design, setDesign] = useState<FloorPlanLayout | null>(null);
+  const [designResult, setDesignResult] = useState<DesignResult | null>(null);
   const [designLoading, setDesignLoading] = useState(false);
   const [designError, setDesignError] = useState("");
   const [planStyle, setPlanStyle] = useState<PlanStyle>("blueprint");
@@ -136,7 +141,11 @@ export default function LeadForm() {
       });
       const result = await res.json();
       if (result.success) {
-        setDesign(result.layout);
+        if (result.mode === "art") {
+          setDesignResult({ mode: "art", svg: result.svg, title: result.title, notes: result.notes });
+        } else {
+          setDesignResult({ mode: "structured", layout: result.layout });
+        }
       } else {
         setDesignError(result.error || "Couldn't generate your design right now.");
       }
@@ -178,15 +187,21 @@ export default function LeadForm() {
               </p>
             )}
 
-            {design && (
+            {designResult && (
               <div className="mt-8 text-left">
                 <h3 className="font-playfair text-lg font-bold text-charcoal mb-3 text-center">
                   Your Instant 2D Layout Preview
                 </h3>
-                <div className="flex justify-center mb-3">
-                  <PlanStyleToggle style={planStyle} onChange={setPlanStyle} />
-                </div>
-                <FloorPlanSVG layout={design} style={planStyle} />
+                {designResult.mode === "structured" && (
+                  <div className="flex justify-center mb-3">
+                    <PlanStyleToggle style={planStyle} onChange={setPlanStyle} />
+                  </div>
+                )}
+                {designResult.mode === "art" ? (
+                  <FloorPlanArt svg={designResult.svg} title={designResult.title} notes={designResult.notes} />
+                ) : (
+                  <FloorPlanSVG layout={designResult.layout} style={planStyle} />
+                )}
                 <p className="font-inter text-[11px] text-muted/70 mt-2 text-center">
                   A draft only — our designers will refine this with you before finalizing.
                 </p>
