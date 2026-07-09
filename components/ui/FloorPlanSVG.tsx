@@ -42,6 +42,9 @@ type Theme = {
   subLabelFill: string;
   legendBorder: string;
   useGrid: boolean;
+  dark: boolean;
+  headingFont: string;
+  monoFont: string;
   categoryColors: Record<RoomCategory, string>;
 };
 
@@ -73,30 +76,30 @@ const WARM_CATEGORY_COLORS: Record<RoomCategory, string> = {
 };
 
 const BLUEPRINT_CATEGORY_COLORS: Record<RoomCategory, string> = {
-  bedroom: "#FFFFFF",
-  master_bedroom: "#FFFFFF",
-  living: "#FFFFFF",
-  family: "#FFFFFF",
-  kitchen: "#FFFFFF",
-  bathroom: "#FFFFFF",
-  powder: "#FFFFFF",
-  dining: "#FFFFFF",
-  foyer: "#FFFFFF",
-  balcony: "#FFFFFF",
-  terrace: "#FFFFFF",
-  utility: "#FFFFFF",
-  pantry: "#FFFFFF",
-  pooja: "#FFFFFF",
-  office: "#FFFFFF",
-  study: "#FFFFFF",
-  theater: "#FFFFFF",
-  gym: "#FFFFFF",
-  servant: "#FFFFFF",
-  store: "#FFFFFF",
-  staircase: "#F1F5F9",
-  lift: "#F1F5F9",
-  garage: "#F1F5F9",
-  other: "#FFFFFF",
+  bedroom: "none",
+  master_bedroom: "none",
+  living: "none",
+  family: "none",
+  kitchen: "none",
+  bathroom: "none",
+  powder: "none",
+  dining: "none",
+  foyer: "none",
+  balcony: "none",
+  terrace: "none",
+  utility: "none",
+  pantry: "none",
+  pooja: "none",
+  office: "none",
+  study: "none",
+  theater: "none",
+  gym: "none",
+  servant: "none",
+  store: "none",
+  staircase: "none",
+  lift: "none",
+  garage: "none",
+  other: "none",
 };
 
 const THEMES: Record<PlanStyle, Theme> = {
@@ -112,20 +115,26 @@ const THEMES: Record<PlanStyle, Theme> = {
     subLabelFill: "#5c4632",
     legendBorder: "#c9b18c",
     useGrid: false,
+    dark: false,
+    headingFont: "Inter, sans-serif",
+    monoFont: "Inter, sans-serif",
     categoryColors: WARM_CATEGORY_COLORS,
   },
   blueprint: {
-    bg: "#F2F7FB",
-    ink: "#0f2438",
-    line: "#0f2438",
-    wetLine: "#0f2438",
-    railLine: "#0f2438",
-    utilityStroke: "#0f2438",
-    accentFill: "#eaf1f7",
-    labelFill: "#0f2438",
-    subLabelFill: "#3a5771",
-    legendBorder: "#9fb8cc",
+    bg: "#0d2f63",
+    ink: "#eaf2ff",
+    line: "#dbe8ff",
+    wetLine: "#9fc4f5",
+    railLine: "#9fc4f5",
+    utilityStroke: "#7fb0ef",
+    accentFill: "#dbe8ff",
+    labelFill: "#eef4ff",
+    subLabelFill: "#9fc4f5",
+    legendBorder: "#7fb0ef",
     useGrid: true,
+    dark: true,
+    headingFont: "'Barlow Condensed', sans-serif",
+    monoFont: "'Space Mono', monospace",
     categoryColors: BLUEPRINT_CATEGORY_COLORS,
   },
 };
@@ -579,8 +588,17 @@ function Legend({ x, y }: { x: number; y: number }) {
   ];
 
   return (
-    <g fontFamily="Inter, sans-serif" fontSize={10} fill={theme.ink}>
-      <rect x={x} y={y} width={130} height={items.length * 22 + 14} fill="#fff" stroke={theme.legendBorder} strokeWidth={1} rx={4} />
+    <g fontFamily={theme.headingFont} fontSize={10} fill={theme.ink}>
+      <rect
+        x={x}
+        y={y}
+        width={130}
+        height={items.length * 22 + 14}
+        fill={theme.dark ? theme.bg : "#fff"}
+        stroke={theme.legendBorder}
+        strokeWidth={1}
+        rx={4}
+      />
       {items.map(([label, icon], i) => (
         <g key={label}>
           {icon(x + 10, y + 14 + i * 22)}
@@ -596,24 +614,124 @@ function Legend({ x, y }: { x: number; y: number }) {
 function CompassAndScale({ x, y }: { x: number; y: number }) {
   const theme = useTheme();
   return (
-    <g fontFamily="Inter, sans-serif" fontSize={9} fill={theme.ink}>
-      <circle cx={x + 15} cy={y + 15} r={15} fill="#fff" stroke={theme.line} strokeWidth={1} />
+    <g fontFamily={theme.headingFont} fontSize={9} fill={theme.ink}>
+      <circle cx={x + 15} cy={y + 15} r={15} fill={theme.dark ? "none" : "#fff"} stroke={theme.line} strokeWidth={1} />
       <path d={`M ${x + 15} ${y + 4} L ${x + 20} ${y + 18} L ${x + 15} ${y + 14} L ${x + 10} ${y + 18} Z`} fill={theme.line} />
       <text x={x + 15} y={y + 34} textAnchor="middle" fontWeight={700}>
         N
       </text>
 
-      <g transform={`translate(${x - 5}, ${y + 52})`}>
-        <line x1={0} y1={0} x2={toPx(5)} y2={0} stroke={theme.ink} strokeWidth={1.5} />
-        {[0, 5].map((ft) => (
-          <g key={ft}>
-            <line x1={toPx(ft)} y1={-4} x2={toPx(ft)} y2={4} stroke={theme.ink} strokeWidth={1} />
-            <text x={toPx(ft)} y={16} textAnchor="middle">
-              {ft}ft
-            </text>
-          </g>
-        ))}
-      </g>
+      {theme.dark ? (
+        <g transform={`translate(${x - 5}, ${y + 52})`} fontFamily={theme.monoFont}>
+          <text x={40} y={-4} textAnchor="middle" fontSize={7.5} fill={theme.subLabelFill} letterSpacing={1}>
+            SCALE (FT)
+          </text>
+          {[0, 1, 2, 3].map((i) => (
+            <rect
+              key={i}
+              x={i * 20}
+              y={0}
+              width={20}
+              height={5}
+              fill={i % 2 === 0 ? theme.accentFill : "none"}
+              stroke={theme.legendBorder}
+              strokeWidth={0.7}
+            />
+          ))}
+          <text x={0} y={16} textAnchor="middle" fontSize={8} fill={theme.subLabelFill}>
+            0
+          </text>
+          <text x={40} y={16} textAnchor="middle" fontSize={8} fill={theme.subLabelFill}>
+            10
+          </text>
+          <text x={80} y={16} textAnchor="middle" fontSize={8} fill={theme.subLabelFill}>
+            20
+          </text>
+        </g>
+      ) : (
+        <g transform={`translate(${x - 5}, ${y + 52})`}>
+          <line x1={0} y1={0} x2={toPx(5)} y2={0} stroke={theme.ink} strokeWidth={1.5} />
+          {[0, 5].map((ft) => (
+            <g key={ft}>
+              <line x1={toPx(ft)} y1={-4} x2={toPx(ft)} y2={4} stroke={theme.ink} strokeWidth={1} />
+              <text x={toPx(ft)} y={16} textAnchor="middle">
+                {ft}ft
+              </text>
+            </g>
+          ))}
+        </g>
+      )}
+    </g>
+  );
+}
+
+function TitleBlock({
+  x,
+  y,
+  width,
+  plotWidth,
+  plotHeight,
+  totalAreaSqFt,
+  bedCount,
+  bathCount,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  plotWidth: number;
+  plotHeight: number;
+  totalAreaSqFt: number;
+  bedCount: number;
+  bathCount: number;
+}) {
+  const theme = useTheme();
+  const height = 60;
+  const colW = width / 3;
+  const today = new Date()
+    .toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    .toUpperCase();
+  const fields: [string, string][] = [
+    ["PLOT SIZE", `${plotWidth}' × ${plotHeight}'`],
+    ["APPROX AREA", `${totalAreaSqFt} SQ.FT`],
+    ["CONFIG", `${bedCount} BED · ${bathCount} BATH`],
+  ];
+
+  return (
+    <g fontFamily={theme.headingFont}>
+      <rect x={x} y={y} width={width} height={height} fill="none" stroke={theme.legendBorder} strokeWidth={1} />
+      {[1, 2].map((i) => (
+        <line
+          key={i}
+          x1={x + colW * i}
+          y1={y}
+          x2={x + colW * i}
+          y2={y + height}
+          stroke={theme.legendBorder}
+          strokeWidth={0.6}
+          strokeOpacity={0.6}
+        />
+      ))}
+      {fields.map(([label, value], i) => (
+        <g key={label}>
+          <text x={x + colW * i + 14} y={y + 22} fill={theme.subLabelFill} fontSize={8} fontFamily={theme.monoFont} letterSpacing={1}>
+            {label}
+          </text>
+          <text x={x + colW * i + 14} y={y + 42} fill={theme.labelFill} fontSize={13} fontWeight={700} letterSpacing={0.5}>
+            {value}
+          </text>
+        </g>
+      ))}
+      <text
+        x={x + width - 12}
+        y={y + height + 14}
+        textAnchor="end"
+        fill={theme.subLabelFill}
+        fontSize={8}
+        fontFamily={theme.monoFont}
+        letterSpacing={1}
+      >
+        AI-GENERATED SCHEMATIC CONCEPT — {today}
+      </text>
     </g>
   );
 }
@@ -683,25 +801,53 @@ function PlanCanvas({
   const windows = findWindows(rooms, layout.totalWidth, layout.totalHeight);
   const hasStructuralGrid = Boolean(columns?.length || beams?.length);
 
+  const padBottom = theme.dark ? 220 : PAD_BOTTOM;
   const canvasWidth = PAD_LEFT + toPx(layout.totalWidth) + PAD_RIGHT;
-  const canvasHeight = PAD_TOP + toPx(layout.totalHeight) + PAD_BOTTOM;
+  const canvasHeight = PAD_TOP + toPx(layout.totalHeight) + padBottom;
   const gridId = "floorplan-grid";
+  const gridBoldId = "floorplan-grid-bold";
+  const vigId = "floorplan-vignette";
+
+  const totalAreaSqFt = Math.round(rooms.reduce((s, r) => s + r.width * r.height, 0));
+  const bedCount = rooms.filter((r) => {
+    const c = categoryOf(r);
+    return c === "bedroom" || c === "master_bedroom";
+  }).length;
+  const bathCount = rooms.filter((r) => {
+    const c = categoryOf(r);
+    return c === "bathroom" || c === "powder";
+  }).length;
 
   return (
     <div className="w-full overflow-auto">
       <svg viewBox={`0 0 ${canvasWidth} ${canvasHeight}`} width="100%" style={{ maxHeight: 640 }}>
-        {theme.useGrid && (
-          <defs>
-            <pattern id={gridId} width={SCALE} height={SCALE} patternUnits="userSpaceOnUse">
-              <path d={`M ${SCALE} 0 L 0 0 0 ${SCALE}`} fill="none" stroke="#c7d9e8" strokeWidth={0.5} />
-            </pattern>
-          </defs>
+        {theme.useGrid ? (
+          <>
+            <defs>
+              <pattern id={gridId} width={18} height={18} patternUnits="userSpaceOnUse">
+                <path d="M18 0H0V18" fill="none" stroke="#ffffff" strokeOpacity={0.05} strokeWidth={0.6} />
+              </pattern>
+              <pattern id={gridBoldId} width={90} height={90} patternUnits="userSpaceOnUse">
+                <path d="M90 0H0V90" fill="none" stroke="#ffffff" strokeOpacity={0.09} strokeWidth={0.7} />
+              </pattern>
+              <radialGradient id={vigId} cx="50%" cy="42%" r="75%">
+                <stop offset="0%" stopColor="#12386f" />
+                <stop offset="70%" stopColor={theme.bg} />
+                <stop offset="100%" stopColor="#082249" />
+              </radialGradient>
+            </defs>
+            <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={`url(#${vigId})`} />
+            <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={`url(#${gridId})`} />
+            <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={`url(#${gridBoldId})`} />
+            <rect x={10} y={10} width={canvasWidth - 20} height={canvasHeight - 20} fill="none" stroke={theme.legendBorder} strokeWidth={1} strokeOpacity={0.6} />
+            <rect x={16} y={16} width={canvasWidth - 32} height={canvasHeight - 32} fill="none" stroke={theme.subLabelFill} strokeWidth={0.5} strokeOpacity={0.7} />
+          </>
+        ) : (
+          <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={theme.bg} />
         )}
-        <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={theme.useGrid ? `url(#${gridId})` : theme.bg} />
-        {theme.useGrid && <rect x={0} y={0} width={canvasWidth} height={canvasHeight} fill={theme.bg} opacity={0.35} />}
 
         {/* overall dimension lines */}
-        <g stroke={theme.line} strokeWidth={0.75} fontFamily="Inter, sans-serif" fontSize={10} fill={theme.line}>
+        <g stroke={theme.line} strokeWidth={0.75} fontFamily={theme.monoFont} fontSize={10} fill={theme.line}>
           <line x1={X(0)} y1={PAD_TOP - 18} x2={X(layout.totalWidth)} y2={PAD_TOP - 18} />
           <line x1={X(0)} y1={PAD_TOP - 22} x2={X(0)} y2={PAD_TOP - 14} />
           <line x1={X(layout.totalWidth)} y1={PAD_TOP - 22} x2={X(layout.totalWidth)} y2={PAD_TOP - 14} />
@@ -757,40 +903,70 @@ function PlanCanvas({
           <DoorIcon key={i} door={d} />
         ))}
 
-        {rooms.map((room, i) => (
-          <g key={`f-${room.name}-${i}`}>
-            <Furniture room={room} />
-            <text
-              x={X(room.x + room.width / 2)}
-              y={Y(room.y + room.height / 2) - toPx(room.height) * 0.28}
-              textAnchor="middle"
-              fontFamily="Inter, sans-serif"
-              fontSize={11}
-              fontWeight={700}
-              fill={theme.labelFill}
-            >
-              {room.name}
-            </text>
-            <text
-              x={X(room.x + room.width / 2)}
-              y={Y(room.y + room.height / 2) - toPx(room.height) * 0.28 + 12}
-              textAnchor="middle"
-              fontFamily="Inter, sans-serif"
-              fontSize={9}
-              fill={theme.subLabelFill}
-            >
-              {room.width}&apos; x {room.height}&apos;
-            </text>
-          </g>
-        ))}
+        {rooms.map((room, i) => {
+          const labelY = Y(room.y + room.height / 2) - toPx(room.height) * 0.28;
+          return (
+            <g key={`f-${room.name}-${i}`}>
+              <Furniture room={room} />
+              <text
+                x={X(room.x + room.width / 2)}
+                y={labelY}
+                textAnchor="middle"
+                fontFamily={theme.headingFont}
+                fontSize={11}
+                fontWeight={700}
+                letterSpacing={theme.dark ? 0.6 : undefined}
+                fill={theme.labelFill}
+              >
+                {room.name}
+              </text>
+              <text
+                x={X(room.x + room.width / 2)}
+                y={labelY + 12}
+                textAnchor="middle"
+                fontFamily={theme.monoFont}
+                fontSize={9}
+                fill={theme.subLabelFill}
+              >
+                {room.width}&apos; x {room.height}&apos;
+              </text>
+              {theme.dark && (
+                <text
+                  x={X(room.x + room.width / 2)}
+                  y={labelY + 23}
+                  textAnchor="middle"
+                  fontFamily={theme.monoFont}
+                  fontSize={7.5}
+                  letterSpacing={0.5}
+                  fill={theme.utilityStroke}
+                >
+                  {Math.round(room.width * room.height)} SFT
+                </text>
+              )}
+            </g>
+          );
+        })}
 
         {utilities && utilities.length > 0 && <UtilityMarkers utilities={utilities} />}
 
-        <Legend x={PAD_LEFT} y={Y(layout.totalHeight) + 30} />
-        <CompassAndScale x={canvasWidth - 130} y={Y(layout.totalHeight) + 15} />
+        {theme.dark && (
+          <TitleBlock
+            x={X(0)}
+            y={Y(layout.totalHeight) + 20}
+            width={toPx(layout.totalWidth)}
+            plotWidth={layout.totalWidth}
+            plotHeight={layout.totalHeight}
+            totalAreaSqFt={totalAreaSqFt}
+            bedCount={bedCount}
+            bathCount={bathCount}
+          />
+        )}
+
+        <Legend x={PAD_LEFT} y={Y(layout.totalHeight) + (theme.dark ? 100 : 30)} />
+        <CompassAndScale x={canvasWidth - 130} y={Y(layout.totalHeight) + (theme.dark ? 85 : 15)} />
 
         {hasStructuralGrid && (
-          <text x={X(0)} y={canvasHeight - 8} fontFamily="Inter, sans-serif" fontSize={9} fill={theme.utilityStroke} fontStyle="italic">
+          <text x={X(0)} y={canvasHeight - 8} fontFamily={theme.headingFont} fontSize={9} fill={theme.utilityStroke} fontStyle="italic">
             Structural grid shown is indicative only — verify with a licensed structural engineer.
           </text>
         )}
