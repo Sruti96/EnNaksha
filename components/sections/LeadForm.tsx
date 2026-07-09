@@ -6,6 +6,7 @@ import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
 import FloorPlanArt from "@/components/ui/FloorPlanArt";
 import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import LocationAutocomplete from "@/components/ui/LocationAutocomplete";
+import GenerationProgress from "@/components/ui/GenerationProgress";
 import type { FloorPlanLayout } from "@/lib/floorplan";
 
 type DesignResult =
@@ -181,11 +182,7 @@ export default function LeadForm() {
               <a href="#gallery" className="text-warm-brown underline">recent projects →</a>
             </p>
 
-            {designLoading && (
-              <p className="font-inter text-sm text-muted mt-6 animate-pulse">
-                Generating your free 2D layout…
-              </p>
-            )}
+            {designLoading && <GenerationProgress active={designLoading} className="mt-6" />}
 
             {designResult && (
               <div className="mt-8 text-left">

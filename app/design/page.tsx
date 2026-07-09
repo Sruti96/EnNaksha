@@ -5,6 +5,7 @@ import Button from "@/components/ui/Button";
 import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
 import FloorPlanArt from "@/components/ui/FloorPlanArt";
 import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
+import GenerationProgress from "@/components/ui/GenerationProgress";
 import type { FloorPlanLayout } from "@/lib/floorplan";
 
 type DesignResult =
@@ -76,6 +77,8 @@ export default function DesignLookupPage() {
             {loading ? "Generating…" : "Generate My Design"}
           </Button>
         </form>
+
+        {loading && <GenerationProgress active={loading} className="mt-6" />}
 
         {error && (
           <p className="font-inter text-sm text-terracotta mt-4 text-center">{error}</p>

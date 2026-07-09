@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import ArchitecturalPlanView from "@/components/ui/ArchitecturalPlanView";
+import GenerationProgress from "@/components/ui/GenerationProgress";
 import type { ArchitecturalPlan } from "@/lib/architecturalPlan";
 
 const SPECIAL_ROOM_OPTIONS: { value: string; label: string; requiresMultiFloor?: boolean }[] = [
@@ -332,6 +333,8 @@ export default function DetailedDesignPage() {
             {loading ? "Generating your concept plan…" : "Generate Detailed Plan"}
           </Button>
         </form>
+
+        {loading && <GenerationProgress active={loading} className="mt-8" />}
 
         {error && <p className="font-inter text-sm text-terracotta mt-6 text-center">{error}</p>}
 
