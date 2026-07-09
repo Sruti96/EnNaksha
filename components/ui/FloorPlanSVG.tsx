@@ -980,7 +980,7 @@ export default function FloorPlanSVG({
   columns,
   beams,
   utilities,
-  style = "warm",
+  style = "blueprint",
 }: {
   layout: FloorPlanLayout;
   columns?: StructuralColumn[];

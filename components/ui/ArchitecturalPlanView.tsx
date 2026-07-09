@@ -235,7 +235,7 @@ function ScheduleTable<T extends Record<string, unknown>>({
 }
 
 export default function ArchitecturalPlanView({ plan }: { plan: ArchitecturalPlan }) {
-  const [style, setStyle] = useState<PlanStyle>("warm");
+  const [style, setStyle] = useState<PlanStyle>("blueprint");
 
   return (
     <div className="flex flex-col gap-6">

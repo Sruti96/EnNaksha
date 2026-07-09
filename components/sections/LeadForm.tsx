@@ -76,7 +76,7 @@ export default function LeadForm() {
   const [design, setDesign] = useState<FloorPlanLayout | null>(null);
   const [designLoading, setDesignLoading] = useState(false);
   const [designError, setDesignError] = useState("");
-  const [planStyle, setPlanStyle] = useState<PlanStyle>("warm");
+  const [planStyle, setPlanStyle] = useState<PlanStyle>("blueprint");
 
   const progress = ((step + 1) / STEPS.length) * 100;
 

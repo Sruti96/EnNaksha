@@ -11,7 +11,7 @@ export default function DesignLookupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [layout, setLayout] = useState<FloorPlanLayout | null>(null);
-  const [planStyle, setPlanStyle] = useState<PlanStyle>("warm");
+  const [planStyle, setPlanStyle] = useState<PlanStyle>("blueprint");
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
