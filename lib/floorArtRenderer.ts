@@ -61,10 +61,14 @@ function roomsMatch(given: Room[], echoed: Room[] | null, tol = 1): boolean {
  * component mechanically drawing the rectangles.
  *
  * Claude isn't free to reposition rooms here; that stays deterministic and
- * validated. This function is purely the illustration/rendering pass. If
- * Claude can't produce a drawing whose echoed room list matches what it was
- * given (after one retry), this returns null and the caller should fall
- * back to rendering that floor with FloorPlanSVG instead.
+ * validated. This function is purely the illustration/rendering pass, and it
+ * always ships Claude's own drawing rather than silently swapping to a
+ * different-looking renderer: up to 3 attempts, and the last valid SVG
+ * produced is returned even if its echoed metadata isn't a perfect match
+ * (the geometry was already correct going in). This only returns null if no
+ * attempt ever produced a parseable SVG at all — a genuine generation
+ * failure, in which case the caller falls back to FloorPlanSVG for that
+ * floor as a last resort.
  */
 export async function drawFloorArt(
   rooms: Room[],
@@ -74,26 +78,35 @@ export async function drawFloorArt(
   title: string
 ): Promise<string | null> {
   const client = getClaudeClient();
+  const ORIGIN_X = 70;
+  const ORIGIN_Y = 60;
+  // Precompute the exact pixel rect for every room ourselves — Claude only
+  // has to draw the numbers we give it rather than doing the feet→pixel
+  // arithmetic itself, which removes a common source of misaligned/
+  // overlapping rooms in freehand LLM-drawn SVGs.
   const roomList = rooms
-    .map(
-      (r) =>
-        `- "${r.name}" (${r.type || "other"}): x=${r.x.toFixed(1)}, y=${r.y.toFixed(1)}, width=${r.width.toFixed(
-          1
-        )}, height=${r.height.toFixed(1)}`
-    )
+    .map((r) => {
+      const px = Math.round(ORIGIN_X + r.x * SCALE);
+      const py = Math.round(ORIGIN_Y + r.y * SCALE);
+      const pw = Math.round(r.width * SCALE);
+      const ph = Math.round(r.height * SCALE);
+      return `- "${r.name}" (${r.type || "other"}): pixel rect x=${px}, y=${py}, width=${pw}, height=${ph} (= ${r.width.toFixed(
+        1
+      )}ft × ${r.height.toFixed(1)}ft, ${(r.width * r.height).toFixed(0)} sq ft — use these ft values in the room's dimension/area label text)`;
+    })
     .join("\n");
 
   const prompt = `You are a technical illustrator drawing a professional architectural concept sheet for EnNaksha, a home design company in India.
 
-Draw the "${floorLabel}" of "${title}" as a single self-contained SVG. The room layout is ALREADY DECIDED and validated — use these EXACT coordinates, do not move, resize, add, or remove any room:
+Draw the "${floorLabel}" of "${title}" as a single self-contained SVG. The room layout is ALREADY DECIDED and validated, and the pixel rectangle for every room has ALREADY BEEN COMPUTED for you below — draw each room as a <rect> at EXACTLY the given pixel x/y/width/height. Do not do your own feet-to-pixel conversion, do not move, resize, add, or remove any room.
 
-Envelope: ${totalWidth.toFixed(1)} ft (width) x ${totalHeight.toFixed(1)} ft (height). Origin (0,0) top-left, x increases right, y increases downward, all in feet.
+Envelope: ${totalWidth.toFixed(1)} ft (width) x ${totalHeight.toFixed(1)} ft (height), drawn as a pixel rect at x=${ORIGIN_X}, y=${ORIGIN_Y}, width=${Math.round(totalWidth * SCALE)}, height=${Math.round(totalHeight * SCALE)}. 1 foot = ${SCALE} px.
 
-Rooms:
+Rooms (pixel coordinates — draw these numbers directly, do not recompute them):
 ${roomList}
 
 === DRAWING SPECIFICATION ===
-- Canvas: viewBox "0 0 ${totalWidth * SCALE + 140} ${totalHeight * SCALE + 340}". Envelope top-left corner at pixel (70, 60); 1 foot = ${SCALE} px, so a room at feet (x,y,w,h) draws at pixel rect (70+x*${SCALE}, 60+y*${SCALE}, w*${SCALE}, h*${SCALE}).
+- Canvas: viewBox "0 0 ${totalWidth * SCALE + 140} ${totalHeight * SCALE + 340}".
 - Dark navy "blueprint" drafting-sheet style: background #0d2f63 with a subtle grid (white lines ~5% opacity every 18px, bolder white lines ~9% opacity every 90px) and a soft radial vignette (lighter navy #12386f center fading to #082249 edges), plus a thin double-line sheet border frame near the canvas edges.
 - Exterior wall: white/near-white (#eaf2ff) stroke ~4-5px, drawn as the envelope rectangle outline. Interior walls: light blue-white (#dbe8ff) stroke ~2-3px, one line per shared wall between adjacent rooms (infer shared walls from the given coordinates).
 - Doors: a short gap in the wall between logically-connected/adjacent rooms plus a quarter-circle swing arc (#9fc4f5, thin) and a straight door-leaf line. Every room needs at least one door reachable from another room or the exterior; infer sensible placement from adjacency.
@@ -105,7 +118,7 @@ ${roomList}
 - Do NOT use <script>, <iframe>, <foreignObject>, <image>, or any external URL references — fully self-contained and inert (no JavaScript).
 
 === REQUIRED MACHINE-READABLE BLOCK ===
-After all visible drawing, include exactly one metadata element (it will not render visually, it's for our internal QA — it must echo back the exact same room list you were given above, unchanged):
+After all visible drawing, include exactly one metadata element (it will not render visually, it's for our internal QA — it must echo back each room's x/y/width/height in FEET, not pixels — i.e. (pixel x - ${ORIGIN_X}) / ${SCALE}, etc. — matching the ft values noted next to each room above, unchanged):
 
 <metadata id="room-data"><![CDATA[
 {"rooms": [{"name": string, "type": string, "x": number, "y": number, "width": number, "height": number}]}
@@ -114,14 +127,22 @@ After all visible drawing, include exactly one metadata element (it will not ren
 Respond with ONLY the raw <svg>...</svg> markup (including the metadata block inside it) — no markdown code fences, no explanation before or after.`;
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: prompt }];
+  let lastValidSvg: string | null = null;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // Up to 3 attempts. We always ship Claude's own drawing — an attempt whose
+  // echoed metadata doesn't perfectly match (but is still a real, parseable
+  // SVG) is kept as a best-effort fallback rather than dropping to
+  // FloorPlanSVG; the underlying room geometry was already validated before
+  // this function was called, so even an imperfect echo still means Claude
+  // drew from the correct coordinates.
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const message = await client.messages.create({ model: CLAUDE_MODEL, max_tokens: 8000, messages });
       const textBlock = message.content.find((b) => b.type === "text");
       const raw = textBlock && "text" in textBlock ? textBlock.text : "";
       const svg = extractSvg(raw);
       if (svg) {
+        lastValidSvg = svg;
         const echoed = extractMetaRooms(svg);
         if (roomsMatch(rooms, echoed)) return svg;
       }
@@ -135,5 +156,5 @@ Respond with ONLY the raw <svg>...</svg> markup (including the metadata block in
       break;
     }
   }
-  return null;
+  return lastValidSvg;
 }

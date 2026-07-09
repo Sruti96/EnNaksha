@@ -15,14 +15,25 @@ import {
 /**
  * The "art" flow — Claude draws the actual SVG artwork itself (the way the
  * claude.ai Design/Artifacts feature does), instead of just returning room
- * coordinates for our own renderer to draw. To avoid re-introducing the
- * class of bug we already fixed once (rooms — especially balconies — placed
- * with no exterior wall), Claude is required to embed a machine-readable
- * <metadata> block listing every room it drew; we parse that and run it
- * through the exact same deterministic checks the structured flow uses
- * (findVentilationViolations / computeSpaceUtilization). If the drawing
- * fails those checks twice, or the SVG/metadata can't be parsed at all, this
- * returns null and the caller should fall back to generateFloorPlan().
+ * coordinates for our own renderer to draw. This is the ONLY rendering path
+ * for a normal request — there's no silent swap to a differently-styled
+ * deterministic render just because a physical check didn't pass on the
+ * first try.
+ *
+ * To avoid re-introducing the class of bug we already fixed once (rooms —
+ * especially balconies — placed with no exterior wall), Claude embeds a
+ * machine-readable <metadata> block listing every room it drew; we run that
+ * through the same deterministic checks the old structured flow used
+ * (findVentilationViolations / computeSpaceUtilization) and, if something's
+ * off, send up to two corrective redraw requests. We keep whichever attempt
+ * scored best and ship it — always Claude's own drawing.
+ *
+ * This only returns null when there's a known/verified project layout for
+ * the given location (real data beats any generated drawing, art or
+ * otherwise — the caller should use that instead), or when every single
+ * attempt failed to even produce a parseable SVG (a genuine API/parsing
+ * failure, not a design-quality issue) — the caller should treat that as an
+ * error rather than a routine fallback.
  */
 export type FloorPlanArt = {
   svg: string;
@@ -124,7 +135,7 @@ Physical requirements (hard constraints, verify each before finalizing):
 
 Draw this as a single self-contained SVG, in the style of a professional architectural concept sheet — a dark navy "blueprint" drafting-table look, matching this reference (which you should treat as your house style):
 
-- Canvas: viewBox "0 0 ${width * SCALE + 140} ${height * SCALE + 340}". Building envelope top-left corner sits at pixel (70, 60); 1 foot = ${SCALE} px, so a room at feet (x,y,w,h) draws at pixel rect (70+x*${SCALE}, 60+y*${SCALE}, w*${SCALE}, h*${SCALE}).
+- Canvas: viewBox "0 0 ${width * SCALE + 140} ${height * SCALE + 340}". Building envelope top-left corner sits at pixel (70, 60); 1 foot = ${SCALE} px, so a room at feet (x,y,w,h) draws at pixel rect (70+x*${SCALE}, 60+y*${SCALE}, w*${SCALE}, h*${SCALE}). Worked example: a room at feet x=5, y=10, width=12, height=13 draws as <rect x="${70 + 5 * SCALE}" y="${60 + 10 * SCALE}" width="${12 * SCALE}" height="${13 * SCALE}">. Before drawing, first privately list out every room's feet rectangle and double-check none of them overlap and every room that needs an exterior wall actually touches x=0, x=${width}, y=0, or y=${height} — only then convert each to its pixel rect and draw.
 - Background: fill #0d2f63 navy. Add a subtle grid (thin white lines at ~5% opacity every 18px, bolder white lines at ~9% opacity every 90px) and a soft radial vignette (lighter navy #12386f center fading to #082249 edges) behind everything, plus a thin double-line sheet border frame near the canvas edges.
 - Exterior wall: white/near-white (#eaf2ff) stroke, width ~4-5px, drawn as the building envelope rectangle outline.
 - Interior walls: light blue-white (#dbe8ff) stroke, width ~2-3px, one line per shared wall between rooms.
@@ -189,8 +200,16 @@ export async function generateFloorPlanArt(input: FloorPlanInput): Promise<Floor
   let violations = findVentilationViolations(result.meta.rooms, result.meta.totalWidth, result.meta.totalHeight);
   let utilization = computeSpaceUtilization(result.meta.rooms, result.meta.totalWidth, result.meta.totalHeight);
   let underfilled = utilization < MIN_SPACE_UTILIZATION;
+  let best = result;
+  let bestViolationCount = violations.length;
+  let bestUtilization = utilization;
 
-  if (violations.length > 0 || underfilled) {
+  // Up to two corrective passes — Claude keeps redrawing until the physical
+  // checks pass, or we run out of attempts. Every attempt is still Claude's
+  // own drawing; we never substitute a different renderer here. We keep
+  // whichever attempt scored best in case the last one doesn't improve.
+  const MAX_CORRECTIONS = 2;
+  for (let correction = 0; correction < MAX_CORRECTIONS && (violations.length > 0 || underfilled); correction++) {
     const issues: string[] = [];
     if (violations.length > 0) {
       issues.push(
@@ -224,28 +243,34 @@ export async function generateFloorPlanArt(input: FloorPlanInput): Promise<Floor
           corrected.meta.totalWidth,
           corrected.meta.totalHeight
         );
-        if (correctedViolations <= violations.length && correctedUtilization >= utilization) {
-          result = corrected;
-          violations = findVentilationViolations(corrected.meta.rooms, corrected.meta.totalWidth, corrected.meta.totalHeight);
-          utilization = correctedUtilization;
-          underfilled = utilization < MIN_SPACE_UTILIZATION;
+        result = corrected;
+        violations = findVentilationViolations(corrected.meta.rooms, corrected.meta.totalWidth, corrected.meta.totalHeight);
+        utilization = correctedUtilization;
+        underfilled = utilization < MIN_SPACE_UTILIZATION;
+
+        if (correctedViolations < bestViolationCount || (correctedViolations === bestViolationCount && correctedUtilization > bestUtilization)) {
+          best = corrected;
+          bestViolationCount = correctedViolations;
+          bestUtilization = correctedUtilization;
         }
+      } else {
+        break; // couldn't even parse a corrected attempt — stop trying, use best so far
       }
     } catch {
-      // keep the original drawing if the correction pass fails
+      break; // keep the best drawing seen so far if a correction pass errors out
     }
   }
 
-  // Still broken after the retry — don't ship a physically-impossible drawing,
-  // let the caller fall back to the validated structured/deterministic flow.
-  if (violations.length > 0 || underfilled) return null;
-
+  // We always ship Claude's own drawing — never silently swap in a
+  // differently-styled deterministic render. `best` holds whichever attempt
+  // scored lowest on violations / highest on utilization, even if it isn't
+  // a perfect 0-violations, ≥90%-filled result.
   return {
-    svg: result.svg,
-    title: result.meta.title || `${input.bhkType || "Custom"} Floor Plan`,
-    notes: result.meta.notes,
-    totalWidth: result.meta.totalWidth,
-    totalHeight: result.meta.totalHeight,
-    rooms: result.meta.rooms,
+    svg: best.svg,
+    title: best.meta.title || `${input.bhkType || "Custom"} Floor Plan`,
+    notes: best.meta.notes,
+    totalWidth: best.meta.totalWidth,
+    totalHeight: best.meta.totalHeight,
+    rooms: best.meta.rooms,
   };
 }

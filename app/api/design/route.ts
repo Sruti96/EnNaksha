@@ -59,11 +59,13 @@ export async function POST(request: Request) {
     };
   }
 
-  // Try letting Claude draw the actual SVG artwork itself first (the same
-  // approach claude.ai's Design feature uses). It's validated internally
-  // against the same physical-correctness checks as the structured flow —
-  // if it fails those, or can't be parsed at all, this returns null and we
-  // fall back to the deterministic structured-JSON + FloorPlanSVG renderer.
+  // Claude draws the actual SVG artwork itself (the same approach claude.ai's
+  // Design feature uses) — this is the only rendering path for a normal
+  // request; generateFloorPlanArt keeps redrawing internally rather than
+  // silently swapping to a different-looking renderer over a failed check.
+  // It only returns null for a known/verified project layout (real data
+  // beats any generated drawing) or a genuine total generation failure —
+  // both of which fall back to the deterministic structured flow below.
   try {
     const art = await generateFloorPlanArt(input);
     if (art) {
