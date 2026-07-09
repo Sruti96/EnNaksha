@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
+import FloorPlanArt from "@/components/ui/FloorPlanArt";
 import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import type { ArchitecturalPlan } from "@/lib/architecturalPlan";
 
@@ -265,16 +266,20 @@ export default function ArchitecturalPlanView({ plan }: { plan: ArchitecturalPla
 
       <SitePlanSVG plan={plan} style={style} />
 
-      {plan.floors.map((floor) => (
-        <FloorPlanSVG
-          key={floor.level}
-          layout={floor.layout}
-          columns={floor.columns}
-          beams={floor.beams}
-          utilities={floor.utilities}
-          style={style}
-        />
-      ))}
+      {plan.floors.map((floor) =>
+        floor.art ? (
+          <FloorPlanArt key={floor.level} svg={floor.art} title={floor.label} />
+        ) : (
+          <FloorPlanSVG
+            key={floor.level}
+            layout={floor.layout}
+            columns={floor.columns}
+            beams={floor.beams}
+            utilities={floor.utilities}
+            style={style}
+          />
+        )
+      )}
 
       {plan.vastuNotes && (
         <div className="bg-ivory border border-sand rounded-xl p-4">

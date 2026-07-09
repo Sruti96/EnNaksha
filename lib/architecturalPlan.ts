@@ -15,6 +15,7 @@ import {
   type FloorPlanLayout,
 } from "@/lib/floorplan";
 import type { StructuralColumn, StructuralBeam, UtilityMarker } from "@/components/ui/FloorPlanSVG";
+import { drawFloorArt } from "@/lib/floorArtRenderer";
 
 export { hasClaudeCredentials };
 
@@ -64,6 +65,9 @@ export type FloorData = {
   columns: StructuralColumn[];
   beams: StructuralBeam[];
   utilities: UtilityMarker[];
+  /** Claude-drawn SVG artwork for this floor, when available (see lib/floorArtRenderer.ts).
+   *  Falls back to rendering `layout` with FloorPlanSVG when undefined. */
+  art?: string;
 };
 
 export type ArchitecturalPlan = {
@@ -539,6 +543,29 @@ export async function generateArchitecturalPlan(rawInput: DetailedDesignInput): 
   if (floors.length === 0) {
     throw new Error("No floors were generated");
   }
+
+  // Let Claude draw the actual SVG artwork for each floor directly (the way
+  // claude.ai's Design feature does), using the room positions already
+  // decided and validated above. If a floor's drawing can't be produced or
+  // doesn't match the given geometry after a retry, art stays undefined and
+  // ArchitecturalPlanView falls back to rendering that floor with
+  // FloorPlanSVG instead — never blocks the rest of the plan.
+  await Promise.all(
+    floors.map(async (floor) => {
+      try {
+        const svg = await drawFloorArt(
+          floor.layout.rooms,
+          floor.layout.totalWidth,
+          floor.layout.totalHeight,
+          floor.label,
+          generated.title || "Residential Concept Plan"
+        );
+        if (svg) floor.art = svg;
+      } catch {
+        // leave floor.art undefined — FloorPlanSVG fallback handles it
+      }
+    })
+  );
 
   const { areaSchedule, carpetAreaSqFt, builtUpAreaSqFt, superBuiltUpAreaSqFt } = buildAreaSchedule(floors);
   const { doorSchedule, windowSchedule } = buildSchedules(floors);
