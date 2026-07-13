@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { hasGoogleSheetsCredentials, saveLead, type Lead } from "@/lib/google-sheets";
 import { hasWhatsAppCredentials, normalizeWhatsAppNumber, sendWhatsAppTemplateMessage } from "@/lib/whatsapp";
+import { hasEmailCredentials, sendLeadConfirmationEmail } from "@/lib/email";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -64,7 +65,23 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, whatsapp });
+    // Best-effort: send a confirmation email to the address the lead
+    // entered, same rule as WhatsApp above — never let a send failure
+    // (missing credentials, unverified sender, bad address, etc.) take
+    // down the lead-save itself.
+    let emailResult: { attempted: boolean; success?: boolean; error?: string } = { attempted: false };
+    if (lead.step === "Complete" && lead.email && hasEmailCredentials()) {
+      try {
+        const result = await sendLeadConfirmationEmail(lead);
+        emailResult = result.success
+          ? { attempted: true, success: true }
+          : { attempted: true, success: false, error: result.error };
+      } catch (err) {
+        emailResult = { attempted: true, success: false, error: err instanceof Error ? err.message : "Unknown error" };
+      }
+    }
+
+    return NextResponse.json({ success: true, whatsapp, email: emailResult });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to save lead";
 
