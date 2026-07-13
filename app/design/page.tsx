@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import Button from "@/components/ui/Button";
-import FloorPlanSVG from "@/components/ui/FloorPlanSVG";
+import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
+import FloorPlanArt from "@/components/ui/FloorPlanArt";
+import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
+import GenerationProgress from "@/components/ui/GenerationProgress";
 import type { FloorPlanLayout } from "@/lib/floorplan";
+
+type DesignResult =
+  | { mode: "art"; svg: string; title?: string; notes?: string }
+  | { mode: "structured"; layout: FloorPlanLayout };
 
 export default function DesignLookupPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [layout, setLayout] = useState<FloorPlanLayout | null>(null);
+  const [result, setResult] = useState<DesignResult | null>(null);
+  const [planStyle, setPlanStyle] = useState<PlanStyle>("blueprint");
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +25,7 @@ export default function DesignLookupPage() {
 
     setLoading(true);
     setError("");
-    setLayout(null);
+    setResult(null);
 
     try {
       const res = await fetch("/api/design", {
@@ -25,11 +33,15 @@ export default function DesignLookupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),
       });
-      const result = await res.json();
-      if (result.success) {
-        setLayout(result.layout);
+      const data = await res.json();
+      if (data.success) {
+        if (data.mode === "art") {
+          setResult({ mode: "art", svg: data.svg, title: data.title, notes: data.notes });
+        } else {
+          setResult({ mode: "structured", layout: data.layout });
+        }
       } else {
-        setError(result.error || "Couldn't generate a design for that email.");
+        setError(data.error || "Couldn't generate a design for that email.");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -66,13 +78,24 @@ export default function DesignLookupPage() {
           </Button>
         </form>
 
+        {loading && <GenerationProgress active={loading} className="mt-6" />}
+
         {error && (
           <p className="font-inter text-sm text-terracotta mt-4 text-center">{error}</p>
         )}
 
-        {layout && (
+        {result && (
           <div className="mt-8">
-            <FloorPlanSVG layout={layout} />
+            {result.mode === "structured" && (
+              <div className="flex justify-center mb-3">
+                <PlanStyleToggle style={planStyle} onChange={setPlanStyle} />
+              </div>
+            )}
+            {result.mode === "art" ? (
+              <FloorPlanArt svg={result.svg} title={result.title} notes={result.notes} />
+            ) : (
+              <FloorPlanSVG layout={result.layout} style={planStyle} />
+            )}
           </div>
         )}
       </div>
