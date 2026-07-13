@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { hasGoogleSheetsCredentials, saveLead, type Lead } from "@/lib/google-sheets";
+import { hasWhatsAppCredentials, normalizeWhatsAppNumber, sendWhatsAppTemplateMessage } from "@/lib/whatsapp";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -40,7 +41,30 @@ export async function POST(request: Request) {
 
   try {
     await saveLead(lead);
-    return NextResponse.json({ success: true });
+
+    // Best-effort: send a WhatsApp confirmation to the lead's number once
+    // the full form is submitted. Never let a WhatsApp failure (missing
+    // credentials, bad number, unapproved template, etc.) take down the
+    // lead-save itself — the sheet write above is the source of truth.
+    let whatsapp: { attempted: boolean; success?: boolean; error?: string } = { attempted: false };
+    if (lead.step === "Complete" && lead.whatsapp && hasWhatsAppCredentials()) {
+      const to = normalizeWhatsAppNumber(String(lead.whatsapp));
+      if (to) {
+        const templateName = process.env.WHATSAPP_TEMPLATE_NAME || "lead_confirmation";
+        const languageCode = process.env.WHATSAPP_TEMPLATE_LANG || "en";
+        const firstName = (lead.fullName || "").trim().split(/\s+/)[0] || "there";
+        try {
+          const result = await sendWhatsAppTemplateMessage(to, templateName, languageCode, [firstName]);
+          whatsapp = result.success
+            ? { attempted: true, success: true }
+            : { attempted: true, success: false, error: result.error };
+        } catch (err) {
+          whatsapp = { attempted: true, success: false, error: err instanceof Error ? err.message : "Unknown error" };
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, whatsapp });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to save lead";
 
