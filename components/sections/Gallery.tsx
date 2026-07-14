@@ -95,9 +95,8 @@ function ProjectDrawer({
   initialIndex: number;
   onClose: () => void;
 }) {
-  // Opens straight into the single-image view at the photo that was showing
-  // on the card when it was clicked — not the grid of every photo.
-  const [activeIndex, setActiveIndex] = useState<number | null>(initialIndex);
+  // Always a single full-size image view — no grid mode anymore.
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
 
   // Keep rendering the last-open project's photos while the popup fades out
   // (project becomes null immediately on close, but the panel is still
@@ -109,16 +108,18 @@ function ProjectDrawer({
     if (project) setDisplayProject(project);
   }, [project]);
 
+  const isOpen = Boolean(project);
+  const photos = displayProject?.photos ?? [];
+
+  const showPrev = () => setActiveIndex((i) => (i - 1 + photos.length) % photos.length);
+  const showNext = () => setActiveIndex((i) => (i + 1) % photos.length);
+
   useEffect(() => {
     if (!project) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (activeIndex !== null) setActiveIndex(null);
-        else onClose();
-      } else if (activeIndex !== null && project) {
-        if (e.key === "ArrowRight") setActiveIndex((i) => (i === null ? i : (i + 1) % project.photos.length));
-        else if (e.key === "ArrowLeft") setActiveIndex((i) => (i === null ? i : (i - 1 + project.photos.length) % project.photos.length));
-      }
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") showNext();
+      else if (e.key === "ArrowLeft") showPrev();
     };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -126,20 +127,22 @@ function ProjectDrawer({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [project, onClose, activeIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, onClose, photos.length]);
 
-  // Every time a project is (re-)opened, jump straight to the photo that
-  // triggered the click rather than the grid overview.
+  // Jump to the photo that triggered the click every time a (new) project opens.
   useEffect(() => {
     setActiveIndex(initialIndex);
   }, [project, initialIndex]);
 
-  const isOpen = Boolean(project);
-  const photos = displayProject?.photos ?? [];
-  const currentPhoto = activeIndex !== null ? photos[activeIndex] : undefined;
+  // Auto-advance through the photos by default while the popup is open.
+  useEffect(() => {
+    if (!isOpen || photos.length < 2) return;
+    const id = setInterval(() => setActiveIndex((i) => (i + 1) % photos.length), ROTATE_MS);
+    return () => clearInterval(id);
+  }, [isOpen, photos.length]);
 
-  const showPrev = () => setActiveIndex((i) => (i === null ? i : (i - 1 + photos.length) % photos.length));
-  const showNext = () => setActiveIndex((i) => (i === null ? i : (i + 1) % photos.length));
+  const currentPhoto = photos[activeIndex];
 
   return (
     <div
@@ -160,82 +163,54 @@ function ProjectDrawer({
         <div className="flex items-center justify-between px-6 py-5 border-b border-sand">
           <h3 className="font-playfair text-xl font-bold text-charcoal pr-4">
             {displayProject?.label}
-            {activeIndex !== null && (
-              <span className="font-inter text-sm font-normal text-muted ml-3">
-                {activeIndex + 1} / {photos.length}
-              </span>
-            )}
+            <span className="font-inter text-sm font-normal text-muted ml-3">
+              {activeIndex + 1} / {photos.length}
+            </span>
           </h3>
           <button
             type="button"
-            onClick={() => (activeIndex !== null ? setActiveIndex(null) : onClose())}
-            aria-label={activeIndex !== null ? "Back to all photos" : "Close"}
+            onClick={onClose}
+            aria-label="Close"
             className="text-charcoal/60 hover:text-charcoal text-2xl leading-none flex-shrink-0"
           >
-            {activeIndex !== null ? "‹ Back" : "×"}
+            ×
           </button>
         </div>
 
-        {activeIndex === null ? (
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {photos.map((src, i) => (
-                <button
-                  key={src}
-                  type="button"
-                  onClick={() => setActiveIndex(i)}
-                  className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-sand"
-                >
-                  <Image
-                    src={src}
-                    alt={`${displayProject?.label} — photo ${i + 1}`}
-                    fill
-                    sizes="(min-width: 640px) 220px, 45vw"
-                    className="object-cover hover:opacity-90 transition-opacity"
-                  />
-                </button>
-              ))}
+        <div className="relative flex-1 bg-charcoal/5 flex items-center justify-center overflow-hidden">
+          {currentPhoto && (
+            <div className="relative w-full h-[60vh] sm:h-[65vh]">
+              <Image
+                src={currentPhoto}
+                alt={`${displayProject?.label} — photo ${activeIndex + 1}`}
+                fill
+                sizes="(min-width: 768px) 700px, 100vw"
+                className="object-contain"
+              />
             </div>
-            <p className="font-inter text-[11px] text-muted/70 mt-6 text-center">
-              {photos.length} photos from this project
-            </p>
-          </div>
-        ) : (
-          <div className="relative flex-1 bg-charcoal/5 flex items-center justify-center overflow-hidden">
-            {currentPhoto && (
-              <div className="relative w-full h-[60vh] sm:h-[65vh]">
-                <Image
-                  src={currentPhoto}
-                  alt={`${displayProject?.label} — photo ${activeIndex! + 1}`}
-                  fill
-                  sizes="(min-width: 768px) 700px, 100vw"
-                  className="object-contain"
-                />
-              </div>
-            )}
+          )}
 
-            {photos.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={showPrev}
-                  aria-label="Previous photo"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-ivory/90 hover:bg-ivory text-charcoal w-10 h-10 rounded-full flex items-center justify-center shadow-md text-xl"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  onClick={showNext}
-                  aria-label="Next photo"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-ivory/90 hover:bg-ivory text-charcoal w-10 h-10 rounded-full flex items-center justify-center shadow-md text-xl"
-                >
-                  ›
-                </button>
-              </>
-            )}
-          </div>
-        )}
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={showPrev}
+                aria-label="Previous photo"
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-ivory/90 hover:bg-ivory text-charcoal w-10 h-10 rounded-full flex items-center justify-center shadow-md text-xl"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={showNext}
+                aria-label="Next photo"
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-ivory/90 hover:bg-ivory text-charcoal w-10 h-10 rounded-full flex items-center justify-center shadow-md text-xl"
+              >
+                ›
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
