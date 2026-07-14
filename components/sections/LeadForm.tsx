@@ -76,6 +76,11 @@ const STEPS = [
   "Budget",
 ];
 
+// Temporarily disabled per request: skip the Claude-generated instant 2D
+// design preview on submit — just show the success screen. Flip to true to
+// re-enable calling /api/design after a lead is saved.
+const ENABLE_INSTANT_DESIGN = false;
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Indian mobile numbers: 10 digits, starting with 6-9 (matches how
 // normalizeWhatsAppNumber in lib/whatsapp.ts expects bare local numbers).
@@ -158,6 +163,11 @@ export default function LeadForm() {
       setSubmitting(false);
       setSubmitted(true);
     }
+
+    // Instant 2D design preview on submit is temporarily disabled — the
+    // success screen shows on its own for now. Flip ENABLE_INSTANT_DESIGN
+    // back to true to re-enable the Claude-generated preview.
+    if (!ENABLE_INSTANT_DESIGN) return;
 
     // Kick off the Claude-generated 2D design in the background using the
     // same inputs the client just entered (mirrors what's saved to the sheet).

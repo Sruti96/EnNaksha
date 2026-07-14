@@ -61,7 +61,7 @@ export default function Footer() {
               Contact
             </h4>
             <ul className="flex flex-col gap-3 font-inter text-sm text-ivory/70">
-              <li>📱 WhatsApp: +91 XXXXX XXXXX</li>
+              <li>📱 WhatsApp: +91 97311 90902</li>
               <li>📧 hello@ennaksha.com</li>
               <li>📍 Bengaluru, Karnataka</li>
             </ul>

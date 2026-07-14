@@ -29,7 +29,7 @@ export default function Home() {
 
       {/* Floating Enzo (Shih Tzu mascot) WhatsApp button */}
       <a
-        href="https://wa.me/919999999999"
+        href="https://wa.me/919731190902"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Chat with Enzo on WhatsApp"
