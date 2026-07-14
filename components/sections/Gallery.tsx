@@ -22,12 +22,20 @@ const PROJECTS = [
     folder: "amrutha-platinum-whitefield",
     count: 13,
     ext: "jpg",
+    firstPhoto: 8,
   },
-].map((p) => ({
-  label: p.label,
-  tagline: p.tagline,
-  photos: Array.from({ length: p.count }, (_, i) => `/gallery/${p.folder}/photo-${String(i + 1).padStart(2, "0")}.${p.ext}`),
-}));
+].map((p) => {
+  const order = Array.from({ length: p.count }, (_, i) => i + 1);
+  if ("firstPhoto" in p && p.firstPhoto) {
+    order.splice(order.indexOf(p.firstPhoto), 1);
+    order.unshift(p.firstPhoto);
+  }
+  return {
+    label: p.label,
+    tagline: p.tagline,
+    photos: order.map((n) => `/gallery/${p.folder}/photo-${String(n).padStart(2, "0")}.${p.ext}`),
+  };
+});
 
 type Project = (typeof PROJECTS)[number];
 
