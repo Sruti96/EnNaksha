@@ -20,7 +20,7 @@ type Project = (typeof PROJECTS)[number];
 
 const ROTATE_MS = 3500;
 
-function ProjectCard({ project, onView }: { project: Project; onView: () => void }) {
+function ProjectCard({ project, onView }: { project: Project; onView: (startIndex: number) => void }) {
   const { label, photos } = project;
   const [index, setIndex] = useState(0);
 
@@ -33,7 +33,7 @@ function ProjectCard({ project, onView }: { project: Project; onView: () => void
   return (
     <AnimatedSection className="break-inside-avoid">
       <div
-        onClick={onView}
+        onClick={() => onView(index)}
         className="relative group rounded-xl overflow-hidden h-[440px] cursor-pointer bg-sand"
       >
         {photos.map((src, i) => (
@@ -86,8 +86,18 @@ function ProjectCard({ project, onView }: { project: Project; onView: () => void
   );
 }
 
-function ProjectDrawer({ project, onClose }: { project: Project | null; onClose: () => void }) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+function ProjectDrawer({
+  project,
+  initialIndex,
+  onClose,
+}: {
+  project: Project | null;
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  // Opens straight into the single-image view at the photo that was showing
+  // on the card when it was clicked — not the grid of every photo.
+  const [activeIndex, setActiveIndex] = useState<number | null>(initialIndex);
 
   useEffect(() => {
     if (!project) return;
@@ -108,10 +118,11 @@ function ProjectDrawer({ project, onClose }: { project: Project | null; onClose:
     };
   }, [project, onClose, activeIndex]);
 
-  // Reset back to the grid every time a different project is opened/closed.
+  // Every time a project is (re-)opened, jump straight to the photo that
+  // triggered the click rather than the grid overview.
   useEffect(() => {
-    setActiveIndex(null);
-  }, [project]);
+    setActiveIndex(initialIndex);
+  }, [project, initialIndex]);
 
   const isOpen = Boolean(project);
   const photos = project?.photos ?? [];
@@ -219,6 +230,7 @@ function ProjectDrawer({ project, onClose }: { project: Project | null; onClose:
 
 export default function Gallery() {
   const [openProject, setOpenProject] = useState<Project | null>(null);
+  const [openIndex, setOpenIndex] = useState(0);
 
   return (
     <SectionWrapper id="gallery" className="bg-ivory py-20">
@@ -232,7 +244,14 @@ export default function Gallery() {
       </AnimatedSection>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {PROJECTS.map((project) => (
-          <ProjectCard key={project.label} project={project} onView={() => setOpenProject(project)} />
+          <ProjectCard
+            key={project.label}
+            project={project}
+            onView={(startIndex) => {
+              setOpenIndex(startIndex);
+              setOpenProject(project);
+            }}
+          />
         ))}
       </div>
       <div className="text-center mt-10">
@@ -244,7 +263,7 @@ export default function Gallery() {
         </a>
       </div>
 
-      <ProjectDrawer project={openProject} onClose={() => setOpenProject(null)} />
+      <ProjectDrawer project={openProject} initialIndex={openIndex} onClose={() => setOpenProject(null)} />
     </SectionWrapper>
   );
 }
