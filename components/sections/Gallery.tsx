@@ -24,7 +24,7 @@ const PROJECTS = [
     folder: "amrutha-platinum-whitefield",
     count: 13,
     ext: "jpg",
-    firstPhoto: 8,
+    firstPhoto: 7,
   },
 ].map((p) => {
   const order = Array.from({ length: p.count }, (_, i) => i + 1);
