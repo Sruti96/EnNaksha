@@ -1,38 +1,36 @@
 import SectionWrapper from "@/components/ui/SectionWrapper";
 import AnimatedSection from "@/components/ui/AnimatedSection";
 
-const projects = [
-  {
-    label: "3 BHK | Whitefield",
-    gradient: "linear-gradient(160deg, #7C4A1E, #5C3310, #E0CCAA)",
-    height: "h-64",
-  },
-  {
-    label: "2 BHK | Sarjapur Road",
-    gradient: "linear-gradient(160deg, #5C3310, #E0CCAA, #B5651D)",
-    height: "h-80",
-  },
-  {
-    label: "Villa | Electronic City",
-    gradient: "linear-gradient(160deg, #F2E8D5, #7C4A1E, #B5651D)",
-    height: "h-56",
-  },
-  {
-    label: "3 BHK | Koramangala",
-    gradient: "linear-gradient(160deg, #2E1B0E, #7C4A1E, #E0CCAA)",
-    height: "h-72",
-  },
-  {
-    label: "Penthouse | Indiranagar",
-    gradient: "linear-gradient(160deg, #B5651D, #FBF5E6, #7C4A1E)",
-    height: "h-60",
-  },
-  {
-    label: "2 BHK | HSR Layout",
-    gradient: "linear-gradient(160deg, #7C4A1E, #B5651D, #F2E8D5)",
-    height: "h-80",
-  },
+// Real project photos, pulled from the shared Google Drive folder. Hosted
+// directly via Google's file-serving URL (the files are shared "Anyone with
+// the link") rather than copied into /public — see the note below the
+// component for the tradeoff and how to switch to self-hosted images later.
+const DRIVE_IDS = [
+  "1KbegUwSyhyxafPS7mLS19rFLTOCAeRAu",
+  "1ZIOwoHhA-C0VpiWDTU1pAMl9BxaAcol_",
+  "1kLdX44_IqgTnbKwjp9zfZnByHUhp7j_X",
+  "1Q7V7o3UogTaGgzVIJ4gqgKcUKKAZ-1nx",
+  "1aeUbqELqo4hlYfx9jv1Wzkpm4_Ya_3Qn",
+  "1budIlFotDeFxd6e_Ye6pbNWVy1j55VgL",
+  "1cc622nqDaCC7FBq-OFRR23bzkz5whBLc",
+  "13usHAEkU4oHd9JJN9ddyhadyJelWooyg",
+  "14AhObln6ENQZAVsXrpUteUYE4bdjtjDd",
+  "1OkiJ5IXhRsUNgiXHRrtQSbsomYaj8Wft",
+  "1m38z3vN7soAtkoyL-7Op37A0-a6wo6XK",
+  "1YjKhErmixiPFRcAEcDHbHbu7kTzgKPUQ",
+  "1AlKUKj0nW9XGA7mSSxxEXaSWSJthcPjw",
+  "1nvwHgpRXCepcrd3X76p_Dp4AWX75o5Mf",
+  "1787FqPB2dcHyJ2HKXZ4OC13DHLpavCsq",
+  "1sR07d91DyHAscEjOigF1G_4paoUPwPq3",
+  "1lx2e70OWXhBR-MnZIvadd1wTsTS3xnXk",
 ];
+
+const HEIGHTS = ["h-64", "h-80", "h-56", "h-72", "h-60"];
+
+const projects = DRIVE_IDS.map((id, i) => ({
+  src: `https://lh3.googleusercontent.com/d/${id}=w1200`,
+  height: HEIGHTS[i % HEIGHTS.length],
+}));
 
 export default function Gallery() {
   return (
@@ -48,16 +46,14 @@ export default function Gallery() {
       <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
         {projects.map((project, i) => (
           <AnimatedSection key={i} className="break-inside-avoid">
-            <div
-              className={`relative group rounded-xl overflow-hidden ${project.height} cursor-pointer`}
-              style={{ background: project.gradient }}
-            >
-              {/* Badge */}
-              <div className="absolute top-3 left-3 z-10">
-                <span className="bg-charcoal/70 text-ivory text-[13px] font-inter font-semibold px-3 py-1.5 rounded-full">
-                  {project.label}
-                </span>
-              </div>
+            <div className={`relative group rounded-xl overflow-hidden ${project.height} cursor-pointer bg-sand`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={project.src}
+                alt="EnNaksha completed home project"
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/50 transition-all duration-300 flex items-center justify-center">
                 <span className="text-ivory font-inter font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-ivory px-6 py-3 rounded-xl">
