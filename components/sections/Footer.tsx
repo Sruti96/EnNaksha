@@ -64,6 +64,16 @@ export default function Footer() {
               <li>📱 Contact No: +91 97311 90902</li>
               <li>📧 hello@ennaksha.com</li>
               <li>📍 Bengaluru, Karnataka</li>
+              <li>
+                <a
+                  href="https://in.linkedin.com/in/srutiarya-panda-csm-758b4a374"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-warm-brown transition-colors"
+                >
+                  🔗 LinkedIn
+                </a>
+              </li>
             </ul>
           </div>
         </div>
