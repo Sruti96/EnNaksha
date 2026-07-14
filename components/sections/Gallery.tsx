@@ -7,7 +7,7 @@ import AnimatedSection from "@/components/ui/AnimatedSection";
 
 // Real project photos, self-hosted under /public/gallery (one folder per
 // project). Each project renders as a single card that cycles through its
-// own photos rather than one tile per photo.
+// own photos, and clicking "View Project" opens a drawer with every photo.
 const PROJECTS = [
   { label: "Uber Verdant | Sarjapur Road", folder: "uber-verdant-sarjapur-road", count: 8, ext: "png" },
   { label: "Amrutha Platinum | Whitefield", folder: "amrutha-platinum-whitefield", count: 13, ext: "jpg" },
@@ -16,9 +16,12 @@ const PROJECTS = [
   photos: Array.from({ length: p.count }, (_, i) => `/gallery/${p.folder}/photo-${String(i + 1).padStart(2, "0")}.${p.ext}`),
 }));
 
+type Project = (typeof PROJECTS)[number];
+
 const ROTATE_MS = 3500;
 
-function ProjectCard({ label, photos }: { label: string; photos: string[] }) {
+function ProjectCard({ project, onView }: { project: Project; onView: () => void }) {
+  const { label, photos } = project;
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -29,7 +32,10 @@ function ProjectCard({ label, photos }: { label: string; photos: string[] }) {
 
   return (
     <AnimatedSection className="break-inside-avoid">
-      <div className="relative group rounded-xl overflow-hidden h-[440px] cursor-pointer bg-sand">
+      <div
+        onClick={onView}
+        className="relative group rounded-xl overflow-hidden h-[440px] cursor-pointer bg-sand"
+      >
         {photos.map((src, i) => (
           <Image
             key={src}
@@ -80,7 +86,75 @@ function ProjectCard({ label, photos }: { label: string; photos: string[] }) {
   );
 }
 
+function ProjectDrawer({ project, onClose }: { project: Project | null; onClose: () => void }) {
+  useEffect(() => {
+    if (!project) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [project, onClose]);
+
+  const isOpen = Boolean(project);
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      }`}
+      aria-hidden={!isOpen}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-charcoal/60" onClick={onClose} />
+
+      {/* Drawer panel */}
+      <div
+        className={`absolute top-0 right-0 h-full w-full sm:w-[520px] bg-ivory shadow-2xl transition-transform duration-300 ease-out flex flex-col ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between px-6 py-5 border-b border-sand">
+          <h3 className="font-playfair text-xl font-bold text-charcoal pr-4">{project?.label}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-charcoal/60 hover:text-charcoal text-2xl leading-none flex-shrink-0"
+          >
+            ×
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="grid grid-cols-2 gap-3">
+            {project?.photos.map((src, i) => (
+              <div key={src} className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-sand">
+                <Image
+                  src={src}
+                  alt={`${project.label} — photo ${i + 1}`}
+                  fill
+                  sizes="260px"
+                  className="object-cover"
+                />
+              </div>
+            ))}
+          </div>
+          <p className="font-inter text-[11px] text-muted/70 mt-6 text-center">
+            {project?.photos.length} photos from this project
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Gallery() {
+  const [openProject, setOpenProject] = useState<Project | null>(null);
+
   return (
     <SectionWrapper id="gallery" className="bg-ivory py-20">
       <AnimatedSection>
@@ -93,7 +167,7 @@ export default function Gallery() {
       </AnimatedSection>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {PROJECTS.map((project) => (
-          <ProjectCard key={project.label} label={project.label} photos={project.photos} />
+          <ProjectCard key={project.label} project={project} onView={() => setOpenProject(project)} />
         ))}
       </div>
       <div className="text-center mt-10">
@@ -104,6 +178,8 @@ export default function Gallery() {
           See All Projects →
         </a>
       </div>
+
+      <ProjectDrawer project={openProject} onClose={() => setOpenProject(null)} />
     </SectionWrapper>
   );
 }
