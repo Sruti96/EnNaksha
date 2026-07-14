@@ -1,36 +1,21 @@
+import Image from "next/image";
 import SectionWrapper from "@/components/ui/SectionWrapper";
 import AnimatedSection from "@/components/ui/AnimatedSection";
 
-// Real project photos, pulled from the shared Google Drive folder. Hosted
-// directly via Google's file-serving URL (the files are shared "Anyone with
-// the link") rather than copied into /public — see the note below the
-// component for the tradeoff and how to switch to self-hosted images later.
-const DRIVE_IDS = [
-  "1KbegUwSyhyxafPS7mLS19rFLTOCAeRAu",
-  "1ZIOwoHhA-C0VpiWDTU1pAMl9BxaAcol_",
-  "1kLdX44_IqgTnbKwjp9zfZnByHUhp7j_X",
-  "1Q7V7o3UogTaGgzVIJ4gqgKcUKKAZ-1nx",
-  "1aeUbqELqo4hlYfx9jv1Wzkpm4_Ya_3Qn",
-  "1budIlFotDeFxd6e_Ye6pbNWVy1j55VgL",
-  "1cc622nqDaCC7FBq-OFRR23bzkz5whBLc",
-  "13usHAEkU4oHd9JJN9ddyhadyJelWooyg",
-  "14AhObln6ENQZAVsXrpUteUYE4bdjtjDd",
-  "1OkiJ5IXhRsUNgiXHRrtQSbsomYaj8Wft",
-  "1m38z3vN7soAtkoyL-7Op37A0-a6wo6XK",
-  "1YjKhErmixiPFRcAEcDHbHbu7kTzgKPUQ",
-  "1AlKUKj0nW9XGA7mSSxxEXaSWSJthcPjw",
-  "1nvwHgpRXCepcrd3X76p_Dp4AWX75o5Mf",
-  "1787FqPB2dcHyJ2HKXZ4OC13DHLpavCsq",
-  "1sR07d91DyHAscEjOigF1G_4paoUPwPq3",
-  "1lx2e70OWXhBR-MnZIvadd1wTsTS3xnXk",
-];
-
+// Real project photos, self-hosted under /public/gallery (grouped by project
+// folder). Both sets were deduplicated against exact byte-identical re-uploads
+// before being placed here.
 const HEIGHTS = ["h-64", "h-80", "h-56", "h-72", "h-60"];
 
-const projects = DRIVE_IDS.map((id, i) => ({
-  src: `https://lh3.googleusercontent.com/d/${id}=w1200`,
-  height: HEIGHTS[i % HEIGHTS.length],
-}));
+const projects = [
+  { label: "Uber Verdant | Sarjapur Road", folder: "uber-verdant-sarjapur-road", count: 8, ext: "png" },
+  { label: "Amrutha Platinum | Whitefield", folder: "amrutha-platinum-whitefield", count: 13, ext: "jpg" },
+].flatMap((project) =>
+  Array.from({ length: project.count }, (_, i) => ({
+    label: project.label,
+    src: `/gallery/${project.folder}/photo-${String(i + 1).padStart(2, "0")}.${project.ext}`,
+  }))
+);
 
 export default function Gallery() {
   return (
@@ -45,15 +30,21 @@ export default function Gallery() {
       </AnimatedSection>
       <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
         {projects.map((project, i) => (
-          <AnimatedSection key={i} className="break-inside-avoid">
-            <div className={`relative group rounded-xl overflow-hidden ${project.height} cursor-pointer bg-sand`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+          <AnimatedSection key={project.src} className="break-inside-avoid">
+            <div className={`relative group rounded-xl overflow-hidden ${HEIGHTS[i % HEIGHTS.length]} cursor-pointer bg-sand`}>
+              <Image
                 src={project.src}
-                alt="EnNaksha completed home project"
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
+                alt={project.label}
+                fill
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover"
               />
+              {/* Badge */}
+              <div className="absolute top-3 left-3 z-10">
+                <span className="bg-charcoal/70 text-ivory text-[13px] font-inter font-semibold px-3 py-1.5 rounded-full">
+                  {project.label}
+                </span>
+              </div>
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/50 transition-all duration-300 flex items-center justify-center">
                 <span className="text-ivory font-inter font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-ivory px-6 py-3 rounded-xl">
