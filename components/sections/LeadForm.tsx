@@ -662,12 +662,17 @@ export default function LeadForm() {
                     </span>
                     <input
                       type="tel"
+                      inputMode="numeric"
                       placeholder="9876543210"
                       value={data.whatsapp}
                       onChange={(e) => {
-                        setData({ ...data, whatsapp: e.target.value });
+                        // Only digits, capped at 10 — blocks letters/symbols
+                        // as the person types instead of only checking on submit.
+                        const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setData({ ...data, whatsapp: digitsOnly });
                         if (errors.whatsapp) setErrors((prev) => ({ ...prev, whatsapp: undefined }));
                       }}
+                      maxLength={10}
                       className="flex-1 px-4 py-3 font-inter text-sm focus:outline-none bg-cream"
                       required
                     />
