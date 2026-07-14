@@ -1,40 +1,255 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import SectionWrapper from "@/components/ui/SectionWrapper";
 import AnimatedSection from "@/components/ui/AnimatedSection";
 
-const projects = [
+// Real project photos, self-hosted under /public/gallery (one folder per
+// project). Each project renders as a single card that cycles through its
+// own photos, and clicking "View Project" opens a drawer with every photo.
+const PROJECTS = [
   {
-    label: "3 BHK | Whitefield",
-    gradient: "linear-gradient(160deg, #7C4A1E, #5C3310, #E0CCAA)",
-    height: "h-64",
+    label: "Uber Verdant | Sarjapur Road",
+    tagline: "A warm, functional interior designed around everyday living",
+    folder: "uber-verdant-sarjapur-road",
+    count: 8,
+    ext: "png",
+    firstPhoto: 4,
+    lastPhoto: 2,
   },
   {
-    label: "2 BHK | Sarjapur Road",
-    gradient: "linear-gradient(160deg, #5C3310, #E0CCAA, #B5651D)",
-    height: "h-80",
+    label: "Amrutha Platinum | Whitefield",
+    tagline: "Clean, contemporary spaces built for comfort and light",
+    folder: "amrutha-platinum-whitefield",
+    count: 13,
+    ext: "jpg",
+    firstPhoto: 7,
   },
-  {
-    label: "Villa | Electronic City",
-    gradient: "linear-gradient(160deg, #F2E8D5, #7C4A1E, #B5651D)",
-    height: "h-56",
-  },
-  {
-    label: "3 BHK | Koramangala",
-    gradient: "linear-gradient(160deg, #2E1B0E, #7C4A1E, #E0CCAA)",
-    height: "h-72",
-  },
-  {
-    label: "Penthouse | Indiranagar",
-    gradient: "linear-gradient(160deg, #B5651D, #FBF5E6, #7C4A1E)",
-    height: "h-60",
-  },
-  {
-    label: "2 BHK | HSR Layout",
-    gradient: "linear-gradient(160deg, #7C4A1E, #B5651D, #F2E8D5)",
-    height: "h-80",
-  },
-];
+].map((p) => {
+  const order = Array.from({ length: p.count }, (_, i) => i + 1);
+  if ("firstPhoto" in p && p.firstPhoto) {
+    order.splice(order.indexOf(p.firstPhoto), 1);
+    order.unshift(p.firstPhoto);
+  }
+  if ("lastPhoto" in p && p.lastPhoto) {
+    order.splice(order.indexOf(p.lastPhoto), 1);
+    order.push(p.lastPhoto);
+  }
+  return {
+    label: p.label,
+    tagline: p.tagline,
+    photos: order.map((n) => `/gallery/${p.folder}/photo-${String(n).padStart(2, "0")}.${p.ext}`),
+  };
+});
+
+type Project = (typeof PROJECTS)[number];
+
+const ROTATE_MS = 3500;
+
+function ProjectCard({ project, onView }: { project: Project; onView: (startIndex: number) => void }) {
+  const { label, photos } = project;
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (photos.length < 2) return;
+    const id = setInterval(() => setIndex((i) => (i + 1) % photos.length), ROTATE_MS);
+    return () => clearInterval(id);
+  }, [photos.length]);
+
+  return (
+    <AnimatedSection className="break-inside-avoid">
+      <div
+        onClick={() => onView(index)}
+        className="relative group rounded-xl overflow-hidden h-[440px] cursor-pointer bg-sand"
+      >
+        {photos.map((src, i) => (
+          <Image
+            key={src}
+            src={src}
+            alt={`${label} — photo ${i + 1}`}
+            fill
+            sizes="(min-width: 768px) 50vw, 100vw"
+            priority={i === 0}
+            className={`object-cover transition-opacity duration-700 ease-in-out ${
+              i === index ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        ))}
+
+        {/* Badge */}
+        <div className="absolute top-3 left-3 z-10">
+          <span className="bg-charcoal/70 text-ivory text-[13px] font-inter font-semibold px-3 py-1.5 rounded-full">
+            {label}
+          </span>
+        </div>
+
+        {/* Dot indicators */}
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-10">
+          {photos.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIndex(i);
+              }}
+              aria-label={`Show photo ${i + 1} of ${label}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === index ? "w-5 bg-ivory" : "w-1.5 bg-ivory/50"
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/50 transition-all duration-300 flex items-center justify-center">
+          <span className="text-ivory font-inter font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-ivory px-6 py-3 rounded-xl">
+            View Project →
+          </span>
+        </div>
+      </div>
+    </AnimatedSection>
+  );
+}
+
+function ProjectDrawer({
+  project,
+  initialIndex,
+  onClose,
+}: {
+  project: Project | null;
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  // Always a single full-size image view — no grid mode anymore.
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+
+  // Keep rendering the last-open project's photos while the popup fades out
+  // (project becomes null immediately on close, but the panel is still
+  // visible for ~300ms). Without this, `photos` would drop to [] mid-fade
+  // and `photos[activeIndex]` would be undefined, which Next/Image turns
+  // into an empty-string `src` and logs a console warning.
+  const [displayProject, setDisplayProject] = useState<Project | null>(project);
+  useEffect(() => {
+    if (project) setDisplayProject(project);
+  }, [project]);
+
+  const isOpen = Boolean(project);
+  const photos = displayProject?.photos ?? [];
+
+  const showPrev = () => setActiveIndex((i) => (i - 1 + photos.length) % photos.length);
+  const showNext = () => setActiveIndex((i) => (i + 1) % photos.length);
+
+  useEffect(() => {
+    if (!project) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") showNext();
+      else if (e.key === "ArrowLeft") showPrev();
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, onClose, photos.length]);
+
+  // Jump to the photo that triggered the click every time a (new) project opens.
+  useEffect(() => {
+    setActiveIndex(initialIndex);
+  }, [project, initialIndex]);
+
+  // Auto-advance through the photos by default while the popup is open.
+  useEffect(() => {
+    if (!isOpen || photos.length < 2) return;
+    const id = setInterval(() => setActiveIndex((i) => (i + 1) % photos.length), ROTATE_MS);
+    return () => clearInterval(id);
+  }, [isOpen, photos.length]);
+
+  const currentPhoto = photos[activeIndex];
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      }`}
+      aria-hidden={!isOpen}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-charcoal/60" onClick={onClose} />
+
+      {/* Popup panel */}
+      <div
+        className={`relative bg-ivory rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col transition-all duration-300 ease-out ${
+          isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        }`}
+      >
+        <div className="relative flex flex-col items-center justify-center px-12 py-5 border-b border-sand text-center">
+          <h3 className="font-playfair text-xl font-bold text-charcoal">
+            {displayProject?.label}
+            <span className="font-inter text-sm font-normal text-muted ml-3">
+              {activeIndex + 1} / {photos.length}
+            </span>
+          </h3>
+          {displayProject?.tagline && (
+            <p className="font-inter text-[13px] text-muted mt-1">{displayProject.tagline}</p>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-6 top-1/2 -translate-y-1/2 text-charcoal/60 hover:text-charcoal text-2xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="relative flex-1 bg-charcoal/5 flex items-center justify-center overflow-hidden">
+          {currentPhoto && (
+            <div className="relative w-full h-[60vh] sm:h-[65vh]">
+              <Image
+                src={currentPhoto}
+                alt={`${displayProject?.label} — photo ${activeIndex + 1}`}
+                fill
+                sizes="(min-width: 768px) 700px, 100vw"
+                className="object-contain"
+              />
+            </div>
+          )}
+
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={showPrev}
+                aria-label="Previous photo"
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-ivory/90 hover:bg-ivory text-charcoal w-10 h-10 rounded-full flex items-center justify-center shadow-md text-xl"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={showNext}
+                aria-label="Next photo"
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-ivory/90 hover:bg-ivory text-charcoal w-10 h-10 rounded-full flex items-center justify-center shadow-md text-xl"
+              >
+                ›
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Gallery() {
+  const [openProject, setOpenProject] = useState<Project | null>(null);
+  const [openIndex, setOpenIndex] = useState(0);
+
   return (
     <SectionWrapper id="gallery" className="bg-ivory py-20">
       <AnimatedSection>
@@ -45,27 +260,16 @@ export default function Gallery() {
           </h2>
         </div>
       </AnimatedSection>
-      <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
-        {projects.map((project, i) => (
-          <AnimatedSection key={i} className="break-inside-avoid">
-            <div
-              className={`relative group rounded-xl overflow-hidden ${project.height} cursor-pointer`}
-              style={{ background: project.gradient }}
-            >
-              {/* Badge */}
-              <div className="absolute top-3 left-3 z-10">
-                <span className="bg-charcoal/70 text-ivory text-[13px] font-inter font-semibold px-3 py-1.5 rounded-full">
-                  {project.label}
-                </span>
-              </div>
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/50 transition-all duration-300 flex items-center justify-center">
-                <span className="text-ivory font-inter font-semibold opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-ivory px-6 py-3 rounded-xl">
-                  View Project →
-                </span>
-              </div>
-            </div>
-          </AnimatedSection>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {PROJECTS.map((project) => (
+          <ProjectCard
+            key={project.label}
+            project={project}
+            onView={(startIndex) => {
+              setOpenIndex(startIndex);
+              setOpenProject(project);
+            }}
+          />
         ))}
       </div>
       <div className="text-center mt-10">
@@ -76,6 +280,8 @@ export default function Gallery() {
           See All Projects →
         </a>
       </div>
+
+      <ProjectDrawer project={openProject} initialIndex={openIndex} onClose={() => setOpenProject(null)} />
     </SectionWrapper>
   );
 }
