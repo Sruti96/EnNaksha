@@ -104,7 +104,7 @@ function ProjectDrawer({ project, onClose }: { project: Project | null; onClose:
 
   return (
     <div
-      className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
         isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       }`}
       aria-hidden={!isOpen}
@@ -112,10 +112,10 @@ function ProjectDrawer({ project, onClose }: { project: Project | null; onClose:
       {/* Backdrop */}
       <div className="absolute inset-0 bg-charcoal/60" onClick={onClose} />
 
-      {/* Drawer panel */}
+      {/* Popup panel */}
       <div
-        className={`absolute top-0 right-0 h-full w-full sm:w-[520px] bg-ivory shadow-2xl transition-transform duration-300 ease-out flex flex-col ${
-          isOpen ? "translate-x-0" : "translate-x-full"
+        className={`relative bg-ivory rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col transition-all duration-300 ease-out ${
+          isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-sand">
@@ -130,14 +130,14 @@ function ProjectDrawer({ project, onClose }: { project: Project | null; onClose:
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {project?.photos.map((src, i) => (
               <div key={src} className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-sand">
                 <Image
                   src={src}
                   alt={`${project.label} — photo ${i + 1}`}
                   fill
-                  sizes="260px"
+                  sizes="(min-width: 640px) 220px, 45vw"
                   className="object-cover"
                 />
               </div>
