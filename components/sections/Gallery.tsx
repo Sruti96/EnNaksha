@@ -15,6 +15,8 @@ const PROJECTS = [
     folder: "uber-verdant-sarjapur-road",
     count: 8,
     ext: "png",
+    firstPhoto: 4,
+    lastPhoto: 2,
   },
   {
     label: "Amrutha Platinum | Whitefield",
@@ -29,6 +31,10 @@ const PROJECTS = [
   if ("firstPhoto" in p && p.firstPhoto) {
     order.splice(order.indexOf(p.firstPhoto), 1);
     order.unshift(p.firstPhoto);
+  }
+  if ("lastPhoto" in p && p.lastPhoto) {
+    order.splice(order.indexOf(p.lastPhoto), 1);
+    order.push(p.lastPhoto);
   }
   return {
     label: p.label,
