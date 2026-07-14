@@ -9,10 +9,23 @@ import AnimatedSection from "@/components/ui/AnimatedSection";
 // project). Each project renders as a single card that cycles through its
 // own photos, and clicking "View Project" opens a drawer with every photo.
 const PROJECTS = [
-  { label: "Uber Verdant | Sarjapur Road", folder: "uber-verdant-sarjapur-road", count: 8, ext: "png" },
-  { label: "Amrutha Platinum | Whitefield", folder: "amrutha-platinum-whitefield", count: 13, ext: "jpg" },
+  {
+    label: "Uber Verdant | Sarjapur Road",
+    tagline: "A warm, functional interior designed around everyday living",
+    folder: "uber-verdant-sarjapur-road",
+    count: 8,
+    ext: "png",
+  },
+  {
+    label: "Amrutha Platinum | Whitefield",
+    tagline: "Clean, contemporary spaces built for comfort and light",
+    folder: "amrutha-platinum-whitefield",
+    count: 13,
+    ext: "jpg",
+  },
 ].map((p) => ({
   label: p.label,
+  tagline: p.tagline,
   photos: Array.from({ length: p.count }, (_, i) => `/gallery/${p.folder}/photo-${String(i + 1).padStart(2, "0")}.${p.ext}`),
 }));
 
@@ -160,13 +173,16 @@ function ProjectDrawer({
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >
-        <div className="relative flex items-center justify-center px-12 py-5 border-b border-sand">
-          <h3 className="font-playfair text-xl font-bold text-charcoal text-center">
+        <div className="relative flex flex-col items-center justify-center px-12 py-5 border-b border-sand text-center">
+          <h3 className="font-playfair text-xl font-bold text-charcoal">
             {displayProject?.label}
             <span className="font-inter text-sm font-normal text-muted ml-3">
               {activeIndex + 1} / {photos.length}
             </span>
           </h3>
+          {displayProject?.tagline && (
+            <p className="font-inter text-[13px] text-muted mt-1">{displayProject.tagline}</p>
+          )}
           <button
             type="button"
             onClick={onClose}
