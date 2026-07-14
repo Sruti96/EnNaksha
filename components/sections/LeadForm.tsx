@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import Button from "@/components/ui/Button";
 import { saveLeadFull } from "@/lib/leads";
 import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
@@ -160,8 +161,17 @@ export default function LeadForm() {
 
   if (submitted) {
     return (
-      <section id="contact" className="bg-sand py-20">
-        <div className="max-w-2xl mx-auto px-4 text-center">
+      <section id="contact" className="relative py-20 overflow-hidden">
+        <Image
+          src="/gallery/amrutha-platinum-whitefield/photo-01.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-sand/90" />
+        <div className="relative max-w-2xl mx-auto px-4 text-center">
           <div className="relative bg-ivory rounded-3xl p-12 shadow-lg border border-sand">
             <Sparkles />
             <div className="text-6xl mb-5">🏡</div>
