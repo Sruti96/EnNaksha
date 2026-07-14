@@ -76,6 +76,11 @@ const STEPS = [
   "Budget",
 ];
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Indian mobile numbers: 10 digits, starting with 6-9 (matches how
+// normalizeWhatsAppNumber in lib/whatsapp.ts expects bare local numbers).
+const PHONE_RE = /^[6-9]\d{9}$/;
+
 function formatBudget(val: number) {
   if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)} Cr`;
   const lakh = val / 100000;
@@ -98,6 +103,7 @@ export default function LeadForm() {
   const [designLoading, setDesignLoading] = useState(false);
   const [designError, setDesignError] = useState("");
   const [planStyle, setPlanStyle] = useState<PlanStyle>("blueprint");
+  const [errors, setErrors] = useState<{ email?: string; whatsapp?: string }>({});
 
   const progress = ((step + 1) / STEPS.length) * 100;
 
@@ -106,7 +112,15 @@ export default function LeadForm() {
   const nextMonth = nextDate.toLocaleString("en-IN", { month: "long" });
 
   const next = () => {
-    if (step === 0 && (!data.location.trim() || !data.email.trim())) return;
+    if (step === 0) {
+      const email = data.email.trim();
+      if (!data.location.trim() || !email) return;
+      if (!EMAIL_RE.test(email)) {
+        setErrors((prev) => ({ ...prev, email: "Enter a valid email address" }));
+        return;
+      }
+      setErrors((prev) => ({ ...prev, email: undefined }));
+    }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
   const prev = () => setStep((s) => Math.max(s - 1, 0));
@@ -114,6 +128,13 @@ export default function LeadForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+
+    const whatsapp = data.whatsapp.trim();
+    if (!PHONE_RE.test(whatsapp)) {
+      setErrors((prev) => ({ ...prev, whatsapp: "Enter a valid 10-digit mobile number" }));
+      return;
+    }
+    setErrors((prev) => ({ ...prev, whatsapp: undefined }));
 
     setSubmitting(true);
     try {
@@ -349,10 +370,18 @@ export default function LeadForm() {
                     type="email"
                     placeholder="yourname@gmail.com"
                     value={data.email}
-                    onChange={(e) => setData({ ...data, email: e.target.value })}
-                    className="w-full border border-sand rounded-lg px-4 py-3 font-inter text-sm focus:outline-none focus:border-warm-brown bg-cream"
+                    onChange={(e) => {
+                      setData({ ...data, email: e.target.value });
+                      if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
+                    className={`w-full border rounded-lg px-4 py-3 font-inter text-sm focus:outline-none bg-cream ${
+                      errors.email ? "border-red-400 focus:border-red-500" : "border-sand focus:border-warm-brown"
+                    }`}
                     required
                   />
+                  {errors.email && (
+                    <p className="font-inter text-[11px] text-red-600 mt-1">{errors.email}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -613,7 +642,11 @@ export default function LeadForm() {
                   <label className="block font-inter text-sm font-medium text-charcoal mb-1">
                     WhatsApp Number
                   </label>
-                  <div className="flex items-center border border-sand rounded-lg overflow-hidden focus-within:border-warm-brown">
+                  <div
+                    className={`flex items-center border rounded-lg overflow-hidden focus-within:border-warm-brown ${
+                      errors.whatsapp ? "border-red-400" : "border-sand"
+                    }`}
+                  >
                     <span className="bg-sand px-3 py-3 font-inter text-sm text-charcoal font-semibold border-r border-sand">
                       +91
                     </span>
@@ -621,13 +654,17 @@ export default function LeadForm() {
                       type="tel"
                       placeholder="9876543210"
                       value={data.whatsapp}
-                      onChange={(e) =>
-                        setData({ ...data, whatsapp: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setData({ ...data, whatsapp: e.target.value });
+                        if (errors.whatsapp) setErrors((prev) => ({ ...prev, whatsapp: undefined }));
+                      }}
                       className="flex-1 px-4 py-3 font-inter text-sm focus:outline-none bg-cream"
                       required
                     />
                   </div>
+                  {errors.whatsapp && (
+                    <p className="font-inter text-[11px] text-red-600 mt-1">{errors.whatsapp}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block font-inter text-sm font-medium text-charcoal mb-2">
