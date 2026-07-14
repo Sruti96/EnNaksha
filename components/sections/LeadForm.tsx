@@ -7,6 +7,7 @@ import FloorPlanArt from "@/components/ui/FloorPlanArt";
 import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import LocationAutocomplete from "@/components/ui/LocationAutocomplete";
 import GenerationProgress from "@/components/ui/GenerationProgress";
+import Sparkles from "@/components/ui/Sparkles";
 import type { FloorPlanLayout } from "@/lib/floorplan";
 
 type DesignResult =
@@ -161,7 +162,8 @@ export default function LeadForm() {
     return (
       <section id="contact" className="bg-sand py-20">
         <div className="max-w-2xl mx-auto px-4 text-center">
-          <div className="bg-ivory rounded-3xl p-12 shadow-lg border border-sand">
+          <div className="relative bg-ivory rounded-3xl p-12 shadow-lg border border-sand">
+            <Sparkles />
             <div className="text-6xl mb-5">🏡</div>
             <h2 className="font-playfair text-3xl font-bold text-charcoal mb-3">
               Your dream home journey has begun!
