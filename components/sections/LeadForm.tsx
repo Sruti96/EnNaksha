@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import NextImage from "next/image";
 import Button from "@/components/ui/Button";
 import { saveLeadFull } from "@/lib/leads";
 import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
@@ -9,7 +8,21 @@ import PlanStyleToggle from "@/components/ui/PlanStyleToggle";
 import LocationAutocomplete from "@/components/ui/LocationAutocomplete";
 import GenerationProgress from "@/components/ui/GenerationProgress";
 import Sparkles from "@/components/ui/Sparkles";
+import BackgroundSlideshow from "@/components/ui/BackgroundSlideshow";
 import type { FloorPlanLayout } from "@/lib/floorplan";
+
+// All real project photos (same folders the "Our Work Speaks" gallery uses),
+// combined into one list for the success-screen background slideshow.
+const ALL_PROJECT_IMAGES = [
+  ...Array.from(
+    { length: 8 },
+    (_, i) => `/gallery/uber-verdant-sarjapur-road/photo-${String(i + 1).padStart(2, "0")}.png`
+  ),
+  ...Array.from(
+    { length: 13 },
+    (_, i) => `/gallery/amrutha-platinum-whitefield/photo-${String(i + 1).padStart(2, "0")}.jpg`
+  ),
+];
 
 type DesignResult =
   | { mode: "art"; svg: string; title?: string; notes?: string }
@@ -162,14 +175,7 @@ export default function LeadForm() {
   if (submitted) {
     return (
       <section id="contact" className="relative py-20 overflow-hidden">
-        <NextImage
-          src="/gallery/amrutha-platinum-whitefield/photo-01.jpg"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
+        <BackgroundSlideshow images={ALL_PROJECT_IMAGES} />
         <div className="absolute inset-0 bg-sand/90" />
         <div className="relative max-w-2xl mx-auto px-4 text-center">
           <div className="relative bg-ivory rounded-3xl p-12 shadow-lg border border-sand">
