@@ -160,8 +160,8 @@ function ProjectDrawer({
           isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-sand">
-          <h3 className="font-playfair text-xl font-bold text-charcoal pr-4">
+        <div className="relative flex items-center justify-center px-12 py-5 border-b border-sand">
+          <h3 className="font-playfair text-xl font-bold text-charcoal text-center">
             {displayProject?.label}
             <span className="font-inter text-sm font-normal text-muted ml-3">
               {activeIndex + 1} / {photos.length}
@@ -171,7 +171,7 @@ function ProjectDrawer({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-charcoal/60 hover:text-charcoal text-2xl leading-none flex-shrink-0"
+            className="absolute right-6 top-1/2 -translate-y-1/2 text-charcoal/60 hover:text-charcoal text-2xl leading-none"
           >
             ×
           </button>
