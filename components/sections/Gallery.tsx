@@ -99,6 +99,16 @@ function ProjectDrawer({
   // on the card when it was clicked — not the grid of every photo.
   const [activeIndex, setActiveIndex] = useState<number | null>(initialIndex);
 
+  // Keep rendering the last-open project's photos while the popup fades out
+  // (project becomes null immediately on close, but the panel is still
+  // visible for ~300ms). Without this, `photos` would drop to [] mid-fade
+  // and `photos[activeIndex]` would be undefined, which Next/Image turns
+  // into an empty-string `src` and logs a console warning.
+  const [displayProject, setDisplayProject] = useState<Project | null>(project);
+  useEffect(() => {
+    if (project) setDisplayProject(project);
+  }, [project]);
+
   useEffect(() => {
     if (!project) return;
     const onKey = (e: KeyboardEvent) => {
@@ -125,7 +135,8 @@ function ProjectDrawer({
   }, [project, initialIndex]);
 
   const isOpen = Boolean(project);
-  const photos = project?.photos ?? [];
+  const photos = displayProject?.photos ?? [];
+  const currentPhoto = activeIndex !== null ? photos[activeIndex] : undefined;
 
   const showPrev = () => setActiveIndex((i) => (i === null ? i : (i - 1 + photos.length) % photos.length));
   const showNext = () => setActiveIndex((i) => (i === null ? i : (i + 1) % photos.length));
@@ -148,7 +159,7 @@ function ProjectDrawer({
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-sand">
           <h3 className="font-playfair text-xl font-bold text-charcoal pr-4">
-            {project?.label}
+            {displayProject?.label}
             {activeIndex !== null && (
               <span className="font-inter text-sm font-normal text-muted ml-3">
                 {activeIndex + 1} / {photos.length}
@@ -177,7 +188,7 @@ function ProjectDrawer({
                 >
                   <Image
                     src={src}
-                    alt={`${project?.label} — photo ${i + 1}`}
+                    alt={`${displayProject?.label} — photo ${i + 1}`}
                     fill
                     sizes="(min-width: 640px) 220px, 45vw"
                     className="object-cover hover:opacity-90 transition-opacity"
@@ -191,15 +202,17 @@ function ProjectDrawer({
           </div>
         ) : (
           <div className="relative flex-1 bg-charcoal/5 flex items-center justify-center overflow-hidden">
-            <div className="relative w-full h-[60vh] sm:h-[65vh]">
-              <Image
-                src={photos[activeIndex]}
-                alt={`${project?.label} — photo ${activeIndex + 1}`}
-                fill
-                sizes="(min-width: 768px) 700px, 100vw"
-                className="object-contain"
-              />
-            </div>
+            {currentPhoto && (
+              <div className="relative w-full h-[60vh] sm:h-[65vh]">
+                <Image
+                  src={currentPhoto}
+                  alt={`${displayProject?.label} — photo ${activeIndex! + 1}`}
+                  fill
+                  sizes="(min-width: 768px) 700px, 100vw"
+                  className="object-contain"
+                />
+              </div>
+            )}
 
             {photos.length > 1 && (
               <>
