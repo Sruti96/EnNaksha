@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import Button from "@/components/ui/Button";
 import { saveLeadFull } from "@/lib/leads";
 import FloorPlanSVG, { type PlanStyle } from "@/components/ui/FloorPlanSVG";
@@ -162,7 +162,7 @@ export default function LeadForm() {
   if (submitted) {
     return (
       <section id="contact" className="relative py-20 overflow-hidden">
-        <Image
+        <NextImage
           src="/gallery/amrutha-platinum-whitefield/photo-01.jpg"
           alt=""
           fill
