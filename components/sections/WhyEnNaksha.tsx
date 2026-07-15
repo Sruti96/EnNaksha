@@ -6,26 +6,15 @@ import AnimatedSection from "@/components/ui/AnimatedSection";
 
 const SHEET_API = "https://script.google.com/macros/s/AKfycbyZg7sTQPYcNmE0Dayde82QUdjp7ONRrxpjHGK50A6-nY5I6qiZ9S4erTHadSfLhfxl1g/exec";
 
-const pillars = [
-  {
-    num: "01",
-    title: "Software Delivery Discipline",
-    body: "We run your home project like a tech sprint — milestones, accountability, and zero surprises.",
-  },
-  {
-    num: "02",
-    title: "Absolute Financial Transparency",
-    body: "Transparent BOQ agreed before work starts. Every rupee documented — no surprise costs on your agreed scope.",
-  },
-  {
-    num: "03",
-    title: "Async Project Tracking",
-    body: "Daily photo updates replace weekend site visits. Check progress from anywhere in the world.",
-  },
+const SHOW_MORE_THRESHOLD = 4;
+
+const trustPoints = [
+  { icon: "📋", text: "Transparent BOQ — costs locked before work starts" },
+  { icon: "📸", text: "Weekly photo updates so you always know progress" },
+  { icon: "✅", text: "On-time delivery committed in writing" },
 ];
 
 type Review = { name: string; location: string; quote: string; initials: string; rating: number };
-
 
 function StarRating({ value, onChange }: { value: number; onChange?: (v: number) => void }) {
   const [hovered, setHovered] = useState(0);
@@ -79,7 +68,6 @@ function WriteReviewModal({ onClose, onSubmit }: { onClose: () => void; onSubmit
       const initials = name.trim().split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
       await onSubmit({ name: name.trim(), location: location.trim(), quote: quote.trim(), initials, rating });
     }
-    // Always show thank you — negative/low-rated reviews are silently dropped
     setSubmitted(true);
   }
 
@@ -134,8 +122,29 @@ function WriteReviewModal({ onClose, onSubmit }: { onClose: () => void; onSubmit
   );
 }
 
+function ReviewCard({ r }: { r: Review }) {
+  return (
+    <div className="bg-ivory rounded-2xl p-6 border border-sand shadow-sm hover:shadow-md transition-shadow flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-2">
+        <StarRating value={r.rating} />
+        <span className="font-playfair text-[40px] leading-none text-warm-brown/15 select-none mt-[-8px]">&ldquo;</span>
+      </div>
+      <p className="font-inter text-[15px] italic text-charcoal/80 leading-[1.8] flex-1">&ldquo;{r.quote}&rdquo;</p>
+      <div className="flex items-center gap-3 pt-2 border-t border-sand">
+        <div className="w-9 h-9 rounded-full bg-warm-brown text-ivory flex items-center justify-center font-inter font-bold text-sm flex-shrink-0">
+          {r.initials}
+        </div>
+        <div>
+          <div className="font-inter font-semibold text-charcoal text-[14px]">{r.name}</div>
+          {r.location && <div className="font-inter text-[12px] text-charcoal/50">{r.location}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function WhyEnNaksha() {
-  const [extraReviews, setExtraReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
@@ -150,10 +159,13 @@ export default function WhyEnNaksha() {
           rating: Number(r.rating),
           initials: r.name.trim().split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2),
         }));
-        setExtraReviews(loaded);
+        setReviews(loaded);
       })
-      .catch(() => {}); // silently fail if sheet is unreachable
+      .catch(() => {});
   }, []);
+
+  const visible = showAll ? reviews : reviews.slice(0, SHOW_MORE_THRESHOLD - 1);
+  const hidden = reviews.length - visible.length;
 
   return (
     <SectionWrapper id="reviews" className="bg-sand py-20">
@@ -161,32 +173,38 @@ export default function WhyEnNaksha() {
         <WriteReviewModal
           onClose={() => setModalOpen(false)}
           onSubmit={async (r) => {
-    try {
-      await fetch(SHEET_API, {
-        method: "POST",
-        body: JSON.stringify({ name: r.name, location: r.location, quote: r.quote, rating: r.rating }),
-      });
-    } catch {}
-    // Don't add to UI — only shows after you approve in Google Sheet
-    setModalOpen(false);
-  }}
+            try {
+              await fetch(SHEET_API, {
+                method: "POST",
+                body: JSON.stringify({ name: r.name, location: r.location, quote: r.quote, rating: r.rating }),
+              });
+            } catch {}
+            setModalOpen(false);
+          }}
         />
       )}
 
       {/* Header */}
       <AnimatedSection>
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-12">
           <div>
             <span className="font-inter text-[11px] uppercase tracking-[0.18em] text-warm-brown/70 mb-3 block">
-              What sets us apart
+              Client reviews
             </span>
-            <h2 className="font-playfair text-3xl sm:text-[42px] font-bold text-charcoal leading-tight">
-              Why Homeowners Trust EnNaksha
+            <h2 className="font-playfair text-3xl sm:text-[42px] font-bold text-charcoal leading-tight mb-4">
+              What Our Clients Say
             </h2>
+            <div className="flex flex-col gap-2">
+              {trustPoints.map((p) => (
+                <span key={p.text} className="font-inter text-[13px] text-charcoal/60 flex items-center gap-2">
+                  <span>{p.icon}</span>{p.text}
+                </span>
+              ))}
+            </div>
           </div>
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 border-2 border-warm-brown text-warm-brown font-inter font-semibold text-[13px] px-5 py-2.5 rounded-lg hover:bg-warm-brown hover:text-ivory transition-colors flex-shrink-0"
+            className="inline-flex items-center gap-2 border-2 border-warm-brown text-warm-brown font-inter font-semibold text-[13px] px-5 py-2.5 rounded-lg hover:bg-warm-brown hover:text-ivory transition-colors flex-shrink-0 self-start"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M5 12h14"/>
@@ -196,61 +214,53 @@ export default function WhyEnNaksha() {
         </div>
       </AnimatedSection>
 
-      {/* Pillars */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {pillars.map((p, i) => (
-          <AnimatedSection key={i}>
-            <div className="bg-ivory rounded-2xl border border-sand shadow-sm hover:shadow-md transition-shadow px-7 pt-8 pb-7 h-full">
-              <div className="font-playfair text-[60px] font-bold text-terracotta leading-none mb-5">{p.num}</div>
-              <h3 className="font-playfair text-[20px] font-bold text-charcoal mb-3 leading-snug">{p.title}</h3>
-              <p className="font-inter text-[15px] text-charcoal/65 leading-[1.75]">{p.body}</p>
-            </div>
-          </AnimatedSection>
-        ))}
-      </div>
+      {/* Reviews grid */}
+      {reviews.length === 0 ? (
+        <AnimatedSection>
+          <div className="text-center py-16 border-2 border-dashed border-warm-brown/20 rounded-2xl">
+            <div className="text-4xl mb-3">⭐</div>
+            <p className="font-playfair text-[20px] font-bold text-charcoal mb-2">Be Our First Reviewer</p>
+            <p className="font-inter text-[14px] text-charcoal/55 mb-6">Share your experience and help other homeowners make the right choice.</p>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="bg-warm-brown text-ivory font-inter font-semibold text-[14px] px-6 py-3 rounded-xl hover:bg-charcoal transition-colors"
+            >
+              Write a Review →
+            </button>
+          </div>
+        </AnimatedSection>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {visible.map((r, i) => (
+              <AnimatedSection key={i}>
+                <ReviewCard r={r} />
+              </AnimatedSection>
+            ))}
+          </div>
 
-      {/* Extra reviews — always collapsed until "Show more" is clicked */}
-      {extraReviews.length > 0 && (
-        <div className="mt-10">
-          {!showAll ? (
-            <div className="flex justify-center">
+          {hidden > 0 && (
+            <div className="flex justify-center mt-8">
               <button
                 onClick={() => setShowAll(true)}
                 className="inline-flex items-center gap-2 font-inter text-[13px] font-semibold text-warm-brown border border-warm-brown/40 px-5 py-2.5 rounded-lg hover:bg-warm-brown hover:text-ivory transition-colors"
               >
-                Show {extraReviews.length} more review{extraReviews.length !== 1 ? "s" : ""} ↓
+                Show {hidden} more review{hidden !== 1 ? "s" : ""} ↓
               </button>
             </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {extraReviews.map((r, i) => (
-                  <AnimatedSection key={i}>
-                    <div className="bg-ivory rounded-xl p-6 border-l-4 border-warm-brown shadow-sm">
-                      <StarRating value={r.rating} />
-                      <p className="font-inter text-[15px] italic text-charcoal/80 leading-[1.75] my-4">&ldquo;{r.quote}&rdquo;</p>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-warm-brown text-ivory flex items-center justify-center font-inter font-bold text-sm flex-shrink-0">{r.initials}</div>
-                        <div>
-                          <div className="font-inter font-semibold text-charcoal text-[14px]">{r.name}</div>
-                          {r.location && <div className="font-inter text-[13px] text-charcoal/55">{r.location}</div>}
-                        </div>
-                      </div>
-                    </div>
-                  </AnimatedSection>
-                ))}
-              </div>
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={() => setShowAll(false)}
-                  className="font-inter text-[13px] font-semibold text-warm-brown hover:underline"
-                >
-                  Show less ↑
-                </button>
-              </div>
-            </>
           )}
-        </div>
+
+          {showAll && reviews.length > SHOW_MORE_THRESHOLD - 1 && (
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setShowAll(false)}
+                className="font-inter text-[13px] font-semibold text-warm-brown hover:underline"
+              >
+                Show less ↑
+              </button>
+            </div>
+          )}
+        </>
       )}
     </SectionWrapper>
   );
