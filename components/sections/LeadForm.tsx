@@ -42,8 +42,8 @@ type FormData = {
 };
 
 const PLANS = [
-  { label: "Naksha Design Plan", sub: "₹175–200/sqft" },
-  { label: "PMC Plan", sub: "₹350–450/sqft" },
+  { label: "Naksha Design Plan", sub: "₹99/sqft" },
+  { label: "PMC Plan", sub: "₹199/sqft" },
   { label: "Not sure yet", sub: "" },
 ];
 

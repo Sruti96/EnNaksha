@@ -29,7 +29,7 @@ export default function Plans() {
                 </span>
                 <h3 className="font-playfair text-[22px] font-bold text-charcoal mb-1">Naksha Plan</h3>
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="font-playfair text-[28px] font-bold text-charcoal">₹175 – ₹200</span>
+                  <span className="font-playfair text-[28px] font-bold text-charcoal">₹99</span>
                   <span className="font-inter text-[14px] text-muted">/sq.ft</span>
                 </div>
                 <p className="font-inter text-[14px] text-charcoal/60">Professional design package. You manage execution.</p>
@@ -77,7 +77,7 @@ export default function Plans() {
                 </span>
                 <h3 className="font-playfair text-[22px] font-bold text-charcoal mb-1">PMC Plan</h3>
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="font-playfair text-[28px] font-bold text-charcoal">₹350 – ₹450</span>
+                  <span className="font-playfair text-[28px] font-bold text-charcoal">₹199</span>
                   <span className="font-inter text-[14px] text-muted">/sq.ft</span>
                 </div>
                 <p className="font-inter text-[14px] text-charcoal/60">Design + full project management. We run it, you approve.</p>
@@ -125,7 +125,7 @@ export default function Plans() {
                 </span>
                 <h3 className="font-playfair text-[22px] text-charcoal mb-1">Full Build Plan</h3>
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="font-playfair text-[28px] font-bold text-charcoal">₹650 – ₹900</span>
+                  <span className="font-playfair text-[28px] font-bold text-charcoal">₹399</span>
                   <span className="font-inter text-[14px] text-muted">/sq.ft</span>
                 </div>
                 <p className="font-inter text-[14px] text-charcoal/60">End-to-end. We design, specify, coordinate, and deliver.</p>

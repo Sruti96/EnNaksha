@@ -41,12 +41,12 @@ export default function Footer() {
             <ul className="flex flex-col gap-2 font-inter text-sm text-ivory/70">
               <li>
                 <a href="#plans" className="hover:text-warm-brown transition-colors">
-                  Naksha Design Plan (₹175–200/sqft)
+                  Naksha Design Plan (₹99/sqft)
                 </a>
               </li>
               <li>
                 <a href="#plans" className="hover:text-warm-brown transition-colors">
-                  PMC Plan (₹350–450/sqft)
+                  PMC Plan (₹199/sqft)
                 </a>
               </li>
               <li className="text-ivory/40">

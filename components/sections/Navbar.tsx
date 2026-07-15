@@ -4,8 +4,8 @@ import Button from "@/components/ui/Button";
 import EnNakshaLogo from "@/components/ui/EnNakshaLogo";
 
 const plans = [
-  { icon: "✏️", iconColor: "text-terracotta", title: "Naksha Design Plan", sub: "Design drawings + specs · ₹175–200/sqft", href: "#plans", badge: null, muted: false },
-  { icon: "📋", iconColor: "text-warm-brown", title: "EnNaksha PMC Plan", sub: "Design + full project management · ₹350–450/sqft", href: "#plans", badge: "Most Popular", muted: false },
+  { icon: "✏️", iconColor: "text-terracotta", title: "Naksha Design Plan", sub: "Design drawings + specs · ₹99/sqft", href: "#plans", badge: null, muted: false },
+  { icon: "📋", iconColor: "text-warm-brown", title: "EnNaksha PMC Plan", sub: "Design + full project management · ₹199/sqft", href: "#plans", badge: "Most Popular", muted: false },
   { icon: "🏗️", iconColor: "text-muted", title: "Full Managed Build", sub: "End-to-end execution — Coming Soon", href: "#contact", badge: "Coming Soon", muted: true },
 ];
 
