@@ -117,21 +117,7 @@ export default function Hero() {
             <AnimatedSection className="relative lg:py-6">
               <InteriorCarousel />
 
-              {/* Floating review chip */}
-              <a
-                href="#reviews"
-                className="absolute -bottom-4 -left-4 bg-ivory rounded-2xl shadow-xl px-4 py-3.5 border border-sand max-w-[210px] hover:shadow-2xl hover:border-warm-brown/30 transition-all duration-200 block group"
-              >
-                <div className="flex gap-0.5 mb-1">
-                  {[...Array(5)].map((_, i) => <span key={i} className="text-yellow-500 text-sm">★</span>)}
-                </div>
-                <p className="font-inter text-[11px] text-charcoal font-semibold leading-snug group-hover:text-warm-brown transition-colors">
-                  &quot;Zero surprise costs. Delivered on time.&quot;
-                </p>
-                <p className="font-inter text-[10px] text-muted mt-1">— Priya S., Sarjapur Rd</p>
-              </a>
-
-              {/* Floating urgency chip */}
+{/* Floating urgency chip */}
               <div className="absolute -top-4 -right-2 bg-terracotta text-ivory rounded-xl shadow-lg px-4 py-2.5 text-center">
                 <div className="font-inter text-[10px] font-semibold uppercase tracking-wider opacity-80">{nextMonth}</div>
                 <div className="font-playfair text-lg font-bold leading-none">4 slots left</div>
