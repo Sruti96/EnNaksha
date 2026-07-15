@@ -14,8 +14,8 @@ const journey = [
 ];
 
 const stats = [
-  { value: "200+", label: "Homes Delivered" },
-  { value: "4.9★", label: "Client Rating" },
+  { value: "2", label: "Homes Delivered" },
+  { value: "5★", label: "Client Rating" },
   { value: "₹0", label: "Hidden Charges" },
   { value: "48h", label: "Free Design" },
 ];
@@ -67,6 +67,12 @@ export default function Hero() {
               <p className="font-inter text-[17px] text-charcoal/65 leading-[1.85] mb-9 max-w-lg">
                 Transparent pricing, no hidden costs, zero surprises — from design to handover.
               </p>
+
+              {/* Early access nudge */}
+              <div className="inline-flex items-center gap-2 bg-terracotta/10 border border-terracotta/25 text-terracotta text-[12px] font-inter font-semibold px-3.5 py-1.5 rounded-full mb-5">
+                <span className="w-2 h-2 bg-terracotta rounded-full animate-pulse" />
+                Only 8 spots remaining at launch pricing
+              </div>
 
               {/* CTAs */}
               <div className="flex flex-wrap gap-4 mb-5">

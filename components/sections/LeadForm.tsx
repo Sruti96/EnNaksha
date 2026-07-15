@@ -151,7 +151,7 @@ export default function LeadForm() {
         homeSize: data.homeSize,
         aesthetic: data.aesthetic,
         timeline: data.timeline,
-        floorPlan: data.floorPlan?.name ?? "",
+        floorPlan: data.floorPlan ?? null,
         budget: data.budget,
         fullName: data.fullName.trim(),
         whatsapp: data.whatsapp.trim(),

@@ -1,6 +1,7 @@
 /**
  * EnNaksha Leads — Google Apps Script
  * Sheet: https://docs.google.com/spreadsheets/d/1SdKIPpEnjmcQCTDpd1cZCg_pg_Q1-h2ljlzmRF2esZI
+ * Drive folder: https://drive.google.com/drive/folders/1R0DcMRSlNQ4tYLK3CVeP8oai5BitWlL_
  *
  * IMPORTANT — after changing this code you MUST redeploy:
  *   Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy
@@ -12,10 +13,11 @@
  * 3. Deploy → New deployment → Web app
  *    - Execute as: Me
  *    - Who has access: Anyone
- * 4. Copy the /exec URL into .env.local as LEADS_SHEET_API
+ * 4. Copy the /exec URL — paste it in the website code
  */
 
 var SPREADSHEET_ID = "1SdKIPpEnjmcQCTDpd1cZCg_pg_Q1-h2ljlzmRF2esZI";
+var DRIVE_FOLDER_ID = "1R0DcMRSlNQ4tYLK3CVeP8oai5BitWlL_";
 
 var HEADERS = [
   "Timestamp",
@@ -39,7 +41,10 @@ function getLeadsSheet_() {
 }
 
 function ensureHeaders_(sheet) {
-  sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  var first = sheet.getRange(1, 1).getValue();
+  if (first !== "Timestamp") {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  }
 }
 
 function parsePayload_(e) {
@@ -54,22 +59,36 @@ function normalizeAddOns_(value) {
   return value || "";
 }
 
-function buildRow_(p) {
+// Upload base64 file to Google Drive, return shareable link
+function uploadToDrive_(base64Data, fileName, mimeType) {
+  try {
+    var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    var decoded = Utilities.base64Decode(base64Data);
+    var blob = Utilities.newBlob(decoded, mimeType || "image/jpeg", fileName || "floor-plan.jpg");
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return file.getUrl();
+  } catch (err) {
+    return "Upload failed: " + String(err);
+  }
+}
+
+function buildRow_(p, driveLink) {
   return [
-    new Date(),
-    p.location || "",
-    p.email || "",
-    p.plan || "",
-    p.bhkType || "",
-    p.homeSize || "",
-    p.aesthetic || "",
-    p.timeline || "",
-    p.floorPlan || "",
-    p.budget || "",
-    p.fullName || "",
-    p.whatsapp || "",
+    new Date().toLocaleString("en-IN"),
+    p.location    || "",
+    p.email       || "",
+    p.plan        || "",
+    p.bhkType     || "",
+    p.homeSize    || "",
+    p.aesthetic   || "",
+    p.timeline    || "",
+    driveLink     || "",
+    p.budget      || "",
+    p.fullName    || "",
+    p.whatsapp    || "",
     normalizeAddOns_(p.addOns),
-    p.step || "",
+    p.step        || "",
   ];
 }
 
@@ -82,7 +101,15 @@ function doPost(e) {
     var payload = parsePayload_(e);
     var sheet = getLeadsSheet_();
     ensureHeaders_(sheet);
-    sheet.appendRow(buildRow_(payload));
+
+    // Upload floor plan photo to Drive if provided
+    var driveLink = "";
+    if (payload.floorPlanBase64 && payload.floorPlanBase64.length > 0) {
+      var fileName = (payload.fullName || "lead").replace(/\s+/g, "-") + "-floor-plan-" + Date.now() + "." + (payload.floorPlanExt || "jpg");
+      driveLink = uploadToDrive_(payload.floorPlanBase64, fileName, payload.floorPlanMime || "image/jpeg");
+    }
+
+    sheet.appendRow(buildRow_(payload, driveLink));
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({ success: false, error: String(error) });
@@ -92,7 +119,9 @@ function doPost(e) {
 function testSetup() {
   var sheet = getLeadsSheet_();
   ensureHeaders_(sheet);
-  Logger.log("Leads sheet ready: " + sheet.getName());
+  Logger.log("Sheet ready: " + sheet.getName());
+  var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  Logger.log("Drive folder ready: " + folder.getName());
 }
 
 function jsonResponse(data) {
